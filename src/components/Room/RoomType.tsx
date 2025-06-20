@@ -39,14 +39,13 @@ function RoomType(
   }: RoomTypeProps) {
 
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-xl group">
-      <div className="relative w-full h-64 overflow-hidden rounded-t-xl">
+    <Card className="w-full overflow-hidden transition-all hover:shadow-xl group">
+      <div className="relative h-64 w-full overflow-hidden">
         <Image
           src={`/img/${hinhAnh || "placeholder.svg"}`}
           alt={tenLoaiPhong}
           fill
-          sizes="100vw"
-          className="object-cover"
+           className="object-cover transition-transform group-hover:scale-105"
         />
         {isPopular && (
           <Badge className="absolute top-4 left-4 bg-orange-500 hover:bg-orange-600">

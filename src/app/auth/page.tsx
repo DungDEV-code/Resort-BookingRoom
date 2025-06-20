@@ -13,12 +13,71 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
+import { useAuth } from "@/context/auth-context"
 export default function AuthPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [emailOrUsername, setEmailOrUsername] = useState("")
     const [password, setPassword] = useState("")
+    const { setUser } = useAuth();
     const router = useRouter()
+    // State đăng ký
+    const [registerEmail, setRegisterEmail] = useState("")
+    const [registerUsername, setRegisterUsername] = useState("")
+    const [registerPassword, setRegisterPassword] = useState("")
+    const [registerConfirm, setRegisterConfirm] = useState("")
+    const isValidEmail = (email: string) => /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
+    const [tabValue, setTabValue] = useState("login");
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!registerUsername.trim() || !registerEmail.trim() || !registerPassword.trim()) {
+            toast.error("❌ Vui lòng điền đầy đủ thông tin");
+            return;
+        }
+
+        if (!isValidEmail(registerEmail)) {
+            toast.error("❌ Email không đúng định dạng");
+            return;
+        }
+
+        if (registerPassword.length < 4) {
+            toast.error("❌ Mật khẩu phải dài tối thiểu 6 ký tự");
+            return;
+        }
+
+        if (registerPassword !== registerConfirm) {
+            toast.error("❌ Mật khẩu xác nhận không khớp");
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: registerEmail.trim(),
+                    userName: registerUsername.trim(),
+                    password: registerPassword,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.message || "Lỗi đăng ký");
+
+            toast.success("✅ " + data.message);
+            setTabValue("login");
+            // Reset form sau khi đăng ký thành công
+            setRegisterUsername("");
+            setRegisterEmail("");
+            setRegisterPassword("");
+            setRegisterConfirm("");
+        } catch (err: any) {
+            toast.error("❌ " + err.message);
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -36,6 +95,7 @@ export default function AuthPage() {
             if (!res.ok) throw new Error(data.message || "Lỗi đăng nhập")
 
             toast.success("✅ " + data.message)
+            setUser(data.user);
             router.push("/")
         } catch (err: any) {
             toast.error("❌ " + err.message)
@@ -74,7 +134,7 @@ export default function AuthPage() {
                     </CardHeader>
 
                     <CardContent>
-                        <Tabs defaultValue="login" className="w-full">
+                        <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
                             <TabsList className="grid w-full grid-cols-2 mb-6">
                                 <TabsTrigger value="login">Đăng Nhập</TabsTrigger>
                                 <TabsTrigger value="register">Đăng Ký</TabsTrigger>
@@ -143,12 +203,20 @@ export default function AuthPage() {
                                 </Button>
                             </TabsContent>
                             <TabsContent value="register" className="space-y-4">
-                                <form className="space-y-4">
+                                <form className="space-y-4" onSubmit={handleRegister}>
                                     <div className="space-y-2">
                                         <Label htmlFor="register-username">Tên Đăng Nhập</Label>
                                         <div className="relative">
                                             <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                                            <Input id="register-username" type="text" placeholder="username" className="pl-10" required />
+                                            <Input
+                                                id="register-username"
+                                                type="text"
+                                                placeholder="username"
+                                                className="pl-10"
+                                                value={registerUsername}
+                                                onChange={(e) => setRegisterUsername(e.target.value)}
+                                                required
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -160,6 +228,8 @@ export default function AuthPage() {
                                                 type="email"
                                                 placeholder="your@email.com"
                                                 className="pl-10"
+                                                value={registerEmail}
+                                                onChange={(e) => setRegisterEmail(e.target.value)}
                                                 required
                                             />
                                         </div>
@@ -173,6 +243,8 @@ export default function AuthPage() {
                                                 type={showPassword ? "text" : "password"}
                                                 placeholder="••••••••"
                                                 className="pl-10 pr-10"
+                                                value={registerPassword}
+                                                onChange={(e) => setRegisterPassword(e.target.value)}
                                                 required
                                             />
                                             <button
@@ -193,6 +265,8 @@ export default function AuthPage() {
                                                 type={showConfirmPassword ? "text" : "password"}
                                                 placeholder="••••••••"
                                                 className="pl-10 pr-10"
+                                                value={registerConfirm}
+                                                onChange={(e) => setRegisterConfirm(e.target.value)}
                                                 required
                                             />
                                             <button

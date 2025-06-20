@@ -12,25 +12,25 @@ export interface Services {
   moTaDV: string;
   giaDV: number;
   anhDV: string;
-//   icon?: React.ReactNode;
-//   href?: string;
+  icon?: React.ReactNode;
+  //   href?: string;
   color?: string;
   features?: string[];
 }
 
 export function Service({
-    maDV,
+  maDV,
   tenDV,
   moTaDV,
   giaDV,
   anhDV,
-//   icon,
-//   href = "#",
+  icon,
+  //   href = "#",
   color = "bg-sky-600",
   features = [],
 }: Services) {
   return (
-    <Card  className="overflow-hidden transition-all hover:shadow-xl group">
+    <Card className="overflow-hidden transition-all hover:shadow-xl group">
       <div className="relative w-full h-64 overflow-hidden rounded-xl">
         <Image
           src={`/img/${anhDV || "placeholder.svg"}`}
@@ -38,7 +38,7 @@ export function Service({
           fill
           className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
         />
-        {/* {icon && (
+        {icon && (
           <div
             className={cn(
               "absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-full text-white",
@@ -47,7 +47,7 @@ export function Service({
           >
             {icon}
           </div>
-        )} */}
+        )}
       </div>
       <CardHeader>
         <CardTitle className="text-xl">{tenDV}</CardTitle>

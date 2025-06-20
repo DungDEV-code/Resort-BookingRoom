@@ -87,17 +87,23 @@ export default function Home() {
       });
   }, []);
 
-  const scrollLeft = () => {
-    if (carouselRef.current) {
-      carouselRef.current.scrollBy({ left: -carouselRef.current.offsetWidth / 2, behavior: 'smooth' });
-    }
-  };
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (carouselRef.current) {
+        const container = carouselRef.current;
+        const scrollAmount = container.querySelector('div')?.clientWidth || 0; // scroll từng card
+        const maxScrollLeft = container.scrollWidth - container.clientWidth;
 
-  const scrollRight = () => {
-    if (carouselRef.current) {
-      carouselRef.current.scrollBy({ left: carouselRef.current.offsetWidth / 2, behavior: 'smooth' });
-    }
-  };
+        if (container.scrollLeft + scrollAmount >= maxScrollLeft) {
+          container.scrollTo({ left: 0, behavior: 'smooth' }); // quay về đầu
+        } else {
+          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+      }
+    }, 4000); // mỗi 4 giây
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -154,29 +160,29 @@ export default function Home() {
                 giữa đẳng cấp, phiêu lưu và thư giãn. Cơ sở vật chất đẳng cấp và dịch vụ tận tâm đảm bảo mọi khoảnh khắc
                 của bạn trở nên đặc biệt.
               </p>
-              <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="text-center">
+              <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 mx-auto text-center">
+                <div className="text-center flex flex-col items-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-100">
                     <Bed className="h-8 w-8 text-sky-600" />
                   </div>
                   <h3 className="font-semibold">Phòng Sang Trọng</h3>
                   <p className="text-sm text-muted-foreground">Tầm nhìn hướng biển tuyệt đẹp và tiện nghi hiện đại</p>
                 </div>
-                <div className="text-center">
+                <div className="text-center flex flex-col items-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-100">
                     <Utensils className="h-8 w-8 text-sky-600" />
                   </div>
                   <h3 className="font-semibold">Ẩm Thực Cao Cấp</h3>
                   <p className="text-sm text-muted-foreground">Hương vị tinh túy từ khắp nơi trên thế giới</p>
                 </div>
-                <div className="text-center">
+                <div className="text-center flex flex-col items-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-100">
                     <Waves className="h-8 w-8 text-sky-600" />
                   </div>
                   <h3 className="font-semibold">Bãi Biển Riêng</h3>
                   <p className="text-sm text-muted-foreground">Thoải mái vui chơi với các môn thể thao dưới nước</p>
                 </div>
-                <div className="text-center">
+                <div className="text-center flex flex-col items-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-100">
                     <Sparkles className="h-8 w-8 text-sky-600" />
                   </div>
@@ -199,15 +205,15 @@ export default function Home() {
                 Lựa chọn từ bộ sưu tập phòng và suite cao cấp, mỗi phòng được thiết kế để mang lại sự thoải mái và thư giãn tối đa trong suốt kỳ nghỉ của bạn.
               </p>
             </div>
-            <div className="relative">
+            <div className="relative overflow-hidden">
               <div
                 ref={carouselRef}
-                className="flex overflow-x-auto scroll-smooth gap-6 pb-4 snap-x snap-mandatory scrollbar-hide"
+                className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide min-w-0 max-w-full"
               >
                 {rooms.map((room, index) => (
                   <div
                     key={index}
-                    className="flex-shrink-0 w-[90%] sm:w-[50%] lg:w-[31.5%] snap-start"
+                    className="flex-shrink-0 w-full sm:w-1/2 lg:w-1/3 px-2 snap-start"
 
                   >
                     <RoomType
@@ -224,20 +230,7 @@ export default function Home() {
                 ))}
               </div>
               {/* Navigation Buttons */}
-              <Button
-                onClick={scrollLeft}
-                className="absolute left-0 top-1/2 -translate-y-1/2 bg-white text-sky-600 hover:bg-sky-100 rounded-full p-3 shadow-lg transition-all hover:scale-110"
-                aria-label="Previous"
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </Button>
-              <Button
-                onClick={scrollRight}
-                className="absolute right-0 top-1/2 -translate-y-1/2 bg-white text-sky-900 hover:bg-sky-100 rounded-full py-3 px-4 shadow-lg transition-all hover:scale-110"
-                aria-label="Next"
-              >
-                <ArrowRight className="h-6 w-6" />
-              </Button>
+
             </div>
             <div className="text-center mt-14">
               <Button
@@ -293,7 +286,7 @@ export default function Home() {
         </AnimatedSection>
 
         {/* Special Offers Section */}
-        <section className="py-16 bg-gray-50">
+        <section id="benefit" className="py-16 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4">
@@ -338,7 +331,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="bg-sky-900 text-white px-6 sm:px-10 lg:px-20">
+      <footer id="Call" className="bg-sky-900 text-white px-6 sm:px-10 lg:px-20">
         <div className="max-w-7xl mx-auto py-12">
           <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
             {/* Contact Info */}

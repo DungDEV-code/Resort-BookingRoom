@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Chặn đăng nhập nếu tài khoản không hoạt động hoặc không phải khách hàng
-    if (user.trangThaiTk !== "Đang hoạt " || user.role !== "Khách Hàng") {
+    if (user.trangThaiTk !== "Đang hoạt động" || user.role !== "Khách Hàng") {
       return NextResponse.json({ message: "Tài khoản không đủ điều kiện đăng nhập." }, { status: 403 })
     }
 
