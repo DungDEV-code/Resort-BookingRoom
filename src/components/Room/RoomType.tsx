@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+
 export interface RoomTypeProps {
   // maLoaiPhong: string
   tenLoaiPhong: string
@@ -23,8 +24,8 @@ export interface RoomTypeProps {
   amenities?: string[];
   rating?: number;
   isPopular?: boolean;
-
 }
+
 function RoomType(
   {
     // maLoaiPhong,
@@ -39,13 +40,13 @@ function RoomType(
   }: RoomTypeProps) {
 
   return (
-    <Card className="w-full overflow-hidden transition-all hover:shadow-xl group">
-      <div className="relative h-64 w-full overflow-hidden">
+    <Card className="w-full h-full overflow-hidden transition-all hover:shadow-xl group p-0 border-0 rounded-xl">
+      <div className="relative h-64 w-full overflow-hidden rounded-t-xl">
         <Image
           src={`/img/${hinhAnh || "placeholder.svg"}`}
           alt={tenLoaiPhong}
           fill
-           className="object-cover transition-transform group-hover:scale-105"
+          className="object-cover transition-transform group-hover:scale-105"
         />
         {isPopular && (
           <Badge className="absolute top-4 left-4 bg-orange-500 hover:bg-orange-600">
@@ -58,13 +59,13 @@ function RoomType(
         </div>
       </div>
 
-      <CardHeader>
-        <CardTitle className="text-xl">{tenLoaiPhong}</CardTitle>
-        <CardDescription>{moTa}</CardDescription>
-      </CardHeader>
+      <div className="p-6 bg-white rounded-b-xl">
+        <div className="mb-4">
+          <h3 className="text-xl font-semibold mb-2">{tenLoaiPhong}</h3>
+          <p className="text-gray-600 text-sm">{moTa}</p>
+        </div>
 
-      <CardContent>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex flex-wrap gap-1">
             {amenities?.map((amenity, index) => (
               <Badge key={index} variant="secondary" className="text-xs">
@@ -88,9 +89,8 @@ function RoomType(
             </div>
           </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
-
   )
 }
 

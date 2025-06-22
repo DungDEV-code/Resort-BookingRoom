@@ -9,6 +9,7 @@ export async function GET() {
     try {
         const services = await prisma.dichvu.findMany({
             select: {
+                maDV: true,
                 tenDV: true,
                 moTaDV: true,
                 giaDV: true,

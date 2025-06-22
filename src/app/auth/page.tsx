@@ -79,7 +79,7 @@ export default function AuthPage() {
     };
 
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault()
+        e.preventDefault();
 
         try {
             const res = await fetch("/api/auth", {
@@ -88,19 +88,19 @@ export default function AuthPage() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ emailOrUsername, password }),
-            })
+            });
 
-            const data = await res.json()
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Lỗi đăng nhập");
 
-            if (!res.ok) throw new Error(data.message || "Lỗi đăng nhập")
+            toast.success("✅ " + data.message);
 
-            toast.success("✅ " + data.message)
-            setUser(data.user);
-            router.push("/")
+            // ✅ Reload lại để context fetch user từ token
+            window.location.href = "/"; // hoặc router.refresh() nếu dùng app router mới
         } catch (err: any) {
-            toast.error("❌ " + err.message)
+            toast.error("❌ " + err.message);
         }
-    }
+    };
 
 
     return (

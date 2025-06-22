@@ -7,7 +7,7 @@ import RoomType from "@/components/Room/RoomType";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Bed, Facebook, Instagram, Mail, MapPin, Phone, Sparkles, Twitter, Utensils, Waves } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
+import { FaChild, FaDumbbell, FaFacebook, FaGolfBall, FaInstagram, FaLeaf, FaShip, FaTableTennis, FaTwitter, FaWater } from "react-icons/fa";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { RoomTypeProps } from "@/components/Room/RoomType";
@@ -24,6 +24,17 @@ const iconMap: Record<string, JSX.Element> = {
   spa: <Sparkles className="h-6 w-6" />,
   dining: <Utensils className="h-6 w-6" />,
   beach: <Waves className="h-6 w-6" />,
+  massage: <Sparkles className="h-6 w-6" />,       // dùng chung icon spa
+  restaurant: <Utensils className="h-6 w-6" />,
+  bar: <Utensils className="h-6 w-6" />,           // tạm thời dùng icon chung
+  pool: <Waves className="h-6 w-6" />,
+  gym: <FaDumbbell className="h-6 w-6" />,         // import thêm từ react-icons nếu muốn
+  yoga: <FaLeaf className="h-6 w-6" />,
+  kids: <FaChild className="h-6 w-6" />,
+  golf: <FaGolfBall className="h-6 w-6" />,
+  tennis: <FaTableTennis className="h-6 w-6" />,
+  boat: <FaShip className="h-6 w-6" />,
+  diving: <FaWater className="h-6 w-6" />,
 };
 
 const featuresMap: Record<string, string[]> = {
@@ -56,7 +67,7 @@ export default function Home() {
       .then((data) => {
         const enrichedServices = data.map((service: any, index: number) => ({
           ...service,
-          giaDV: 500000 + index * 100000, // Example pricing
+          // giaDV: service.giaDV, // Example pricing
           anhDV: service.anhDV || `/img/service${index + 1}.jpg`,
           features: featuresMap[service.maDV] || ["Dịch vụ cao cấp", "Trải nghiệm độc đáo"],
           icon: iconMap[service.maDV] || <Sparkles className="h-6 w-6" />,
@@ -66,8 +77,9 @@ export default function Home() {
       })
       .catch((error) => console.error("Error fetching services:", error));
   }, []);
+
   useEffect(() => {
-    fetch("/api/rooms")
+    fetch("/api/roomType")
       .then((res) => res.json())
       .then((data) => {
         const enrichedRooms = data.map((rooms: any, index: number) => {
@@ -136,15 +148,22 @@ export default function Home() {
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <button
-                className="group bg-orange-500 text-black font-bold text-xl 
-                   py-6 px-10 rounded-xl shadow-xl 
-                   hover:bg-orange-600 hover:scale-105 
-                   transition-all duration-300 
-                   flex items-center justify-center 
-                   w-full sm:w-auto"
+                className="group relative bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 
+                 text-white font-semibold text-xl py-6 px-12 rounded-xl shadow-2xl 
+                 hover:from-amber-600 hover:via-orange-600 hover:to-amber-600 
+                 hover:scale-105 hover:shadow-3xl 
+                 transition-all duration-500 
+                 flex items-center justify-center 
+                 w-full sm:w-auto overflow-hidden
+                 ring-2 ring-amber-400/40 hover:ring-amber-500/70"
               >
-                Đặt Phòng Ngay
-                <ArrowRight className="ml-3 h-6 w-6 opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                <Link href="/rooms" className="relative z-10 flex items-center gap-3">
+                  Đặt Phòng Ngay
+                  <Sparkles className="h-6 w-6 transform transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
+                </Link>
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent 
+                      translate-x-[-150%] group-hover:translate-x-[150%] 
+                      transition-transform duration-1000 ease-in-out pointer-events-none" />
               </button>
             </div>
           </div>
@@ -195,58 +214,104 @@ export default function Home() {
         </section>
 
         {/* Room Types Section */}
-        <section id="roomtype" className="py-20 bg-white">
-          <div className="container max-w-7xl mx-auto px-4">
+
+
+        <section id="roomtype" className="py-20 bg-gradient-to-br from-slate-50 via-sky-50 to-blue-50 relative overflow-hidden">
+          {/* Background Decorative - giảm bớt để nhẹ nhàng hơn */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-24 -left-24 w-52 h-52 bg-sky-200/10 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-24 -right-24 w-52 h-52 bg-pink-300/10 rounded-full blur-2xl"></div>
+          </div>
+
+          <div className="container max-w-7xl mx-auto px-4 relative z-10">
             <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-sky-700 mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-sky-500 text-white rounded-full shadow">
+                <Sparkles className="h-4 w-4" />
+                <span className="font-semibold text-sm">Luxury Collection</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-extrabold leading-snug tracking-tight mb-4 bg-gradient-to-r from-sky-700 to-blue-600 bg-clip-text text-transparent">
                 Các Loại Phòng Sang Trọng
               </h2>
               <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
                 Lựa chọn từ bộ sưu tập phòng và suite cao cấp, mỗi phòng được thiết kế để mang lại sự thoải mái và thư giãn tối đa trong suốt kỳ nghỉ của bạn.
               </p>
+              <div className="mt-6 flex justify-center">
+                <div className="w-24 h-0.5 bg-gradient-to-r from-sky-400 to-blue-500 rounded-full"></div>
+              </div>
             </div>
-            <div className="relative overflow-hidden">
+
+            {/* Carousel Section */}
+            <div className="relative">
+              <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none"></div>
+              <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none"></div>
+
               <div
                 ref={carouselRef}
-                className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide min-w-0 max-w-full"
+                className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide gap-4 pb-10 pt-4 px-2"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59,130,246,0.03), rgba(147,51,234,0.03))'
+                }}
               >
                 {rooms.map((room, index) => (
                   <div
                     key={index}
-                    className="flex-shrink-0 w-full sm:w-1/2 lg:w-1/3 px-2 snap-start"
-
+                    className="flex-shrink-0 w-[85vw] sm:w-[47vw] md:w-[32vw] lg:w-[calc((100%-2rem)/3)] snap-start group"
                   >
-                    <RoomType
-                      tenLoaiPhong={room.tenLoaiPhong}
-                      moTa={room.moTa}
-                      price={room.price}
-                      originalPrice={room.originalPrice}
-                      hinhAnh={room.hinhAnh}
-                      amenities={room.amenities}
-                      rating={room.rating}
-                      isPopular={room.isPopular}
-                    />
+                    <div className="relative mx-1 my-2 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                      {room.isPopular && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
+                            🔥 Phổ Biến
+                          </span>
+                        </div>
+                      )}
+                      <div className="relative z-10">
+                        <RoomType
+                          tenLoaiPhong={room.tenLoaiPhong}
+                          moTa={room.moTa}
+                          price={room.price}
+                          originalPrice={room.originalPrice}
+                          hinhAnh={room.hinhAnh}
+                          amenities={room.amenities}
+                          rating={room.rating}
+                          isPopular={room.isPopular}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-              {/* Navigation Buttons */}
-
             </div>
+
+            {/* CTA */}
             <div className="text-center mt-14">
               <Button
                 asChild
                 size="lg"
-                variant="default"
-                className="bg-sky-600 text-white hover:bg-sky-700 px-8 py-6 text-lg rounded-xl shadow-md"
+                className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white hover:from-indigo-700 hover:via-purple-700 hover:to-indigo-700 px-10 py-6 text-xl rounded-2xl shadow-2xl font-semibold transition-all duration-500 transform hover:scale-105 hover:shadow-3xl ring-2 ring-purple-400/40 hover:ring-purple-500/70 group"
               >
-                <Link href="/rooms" className="flex items-center justify-center gap-2">
-                  Xem Tất Cả Phòng
-                  <ArrowRight className="h-5 w-5" />
+                <Link href="/rooms" className="flex items-center gap-3 relative z-10">
+                  <span className="relative z-10">Xem Tất Cả Phòng</span>
+                  <Sparkles className="h-6 w-6 transform transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out pointer-events-none" />
                 </Link>
               </Button>
             </div>
           </div>
+
+          {/* Hide Scrollbar */}
+          <style jsx>{`
+                .scrollbar-hide {
+                  -ms-overflow-style: none;
+                  scrollbar-width: none;
+                }
+
+                .scrollbar-hide::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
         </section>
+
 
         <AnimatedSection>
           <section id="service" className="bg-sky-50 py-16">
@@ -261,26 +326,9 @@ export default function Home() {
               </div>
               <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
                 {services.map((service) => (
-                  <div key={service.maDV} className="flex">
-                    <div className="w-full bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                      <div className="relative h-64 w-full">
-                        <Image
-                          src={service.anhDV?.startsWith("/") ? service.anhDV : `/img/${service.anhDV}`}
-                          alt={service.tenDV}
-                          fill
-                          className="object-cover object-center"
-                        />
-                      </div>
-                      <div className="p-6">
-                        <h3 className="text-xl font-semibold text-sky-800 mb-2">{service.tenDV}</h3>
-                        <p className="text-sm text-slate-600 mb-4">{service.moTaDV}</p>
-                        <p className="text-sky-600 font-semibold text-sm">Giá: {service.giaDV.toLocaleString("vi-VN")}₫</p>
-                      </div>
-                    </div>
-                  </div>
+                  <Service key={service.maDV} {...service} />
                 ))}
               </div>
-
             </div>
           </section>
         </AnimatedSection>

@@ -1,6 +1,7 @@
 // app/api/auth/register/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { roleadminuser_role, roleadminuser_trangThaiTk } from "@/generated/prisma";
 
 export async function POST(req: NextRequest) {
     try {
@@ -32,8 +33,8 @@ export async function POST(req: NextRequest) {
                 email,
                 userName,
                 passWord: password, // nếu chưa hash
-                trangThaiTk: "Đang hoạt động",
-                role: "Khách Hàng"
+                trangThaiTk: roleadminuser_trangThaiTk.DangHoatDong,
+                role: roleadminuser_role.KhachHang,
             }
         });
 

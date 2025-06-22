@@ -1,23 +1,41 @@
-// app/api/rooms/route.ts
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-
-import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
-
+const TINH_TRANG_MAP: Record<string, string> = {
+  Trong: "Trống",
+  DaDat: "Đã Đặt",
+  DangDonDep: "Đang dọn dẹp",
+  DangSuaChua: "Đang sửa chữa",
+};
 
 export async function GET() {
   try {
-    const rooms = await prisma.loaiphong.findMany({
+    const rooms = await prisma.phong.findMany({
       select: {
-        tenLoaiPhong: true,
+        maPhong: true,
         moTa: true,
+        tinhTrang: true,
+        gia: true,
         hinhAnh: true,
+        tenPhong: true,
+        loaiphong: {
+          select: {
+            tenLoaiPhong: true,
+            soNguoi: true,
+            soGiuong: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(rooms);
+    const formattedRooms = rooms.map((room) => ({
+      ...room,
+      tinhTrang: room.tinhTrang ? TINH_TRANG_MAP[room.tinhTrang] || room.tinhTrang : "Không xác định",
+    }));
+
+    return NextResponse.json(formattedRooms);
   } catch (error) {
-    console.error("Lỗi lấy rooms:", error);
-    return NextResponse.json({ message: "Lỗi server khi lấy loại phòng" }, { status: 500 });
+    console.error('Lỗi khi lấy danh sách phòng:', error);
+    return NextResponse.json({ error: 'Lỗi server' }, { status: 500 });
   }
 }
