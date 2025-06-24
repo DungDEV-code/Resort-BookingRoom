@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
-import { 
-  Users, 
-  Bed, 
-  Star, 
-  Wifi, 
-  Car, 
-  Dumbbell, 
-  Waves, 
-  Sparkles, 
-  ArrowLeft, 
+import {
+  Users,
+  Bed,
+  Star,
+  Wifi,
+  Car,
+  Dumbbell,
+  Waves,
+  Sparkles,
+  ArrowLeft,
   MapPin,
   Calendar,
   Clock,
@@ -126,62 +126,76 @@ export default function RoomDetail() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       <Header />
-      
+
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 py-8 md:py-12">
+      <section className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 py-6 md:py-8">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDIwIDAgTCAwIDAgMCAyMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDk5LDEwMiwyNDEsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
-        
+
         <div className="container mx-auto px-4 relative z-10">
+          {/* Back Button */}
           <Button
             variant="ghost"
             onClick={() => router.push("/rooms")}
-            className="mb-6 flex items-center gap-2 text-indigo-700 hover:bg-white/50 rounded-xl px-4 py-2 transition-all duration-300 border border-indigo-200 backdrop-blur-sm bg-white/30"
+            className="mb-4 flex items-center gap-2 text-indigo-700 hover:bg-white/50 rounded-lg px-3 py-2 transition-all duration-300 border border-indigo-200 backdrop-blur-sm bg-white/30 w-fit"
           >
             <ArrowLeft className="h-4 w-4" />
-            Quay lại danh sách
+            <span className="text-sm font-medium">Quay lại danh sách</span>
           </Button>
-          
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Left side - Room info */}
             <div className="flex-1">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
+              {/* Room code badge */}
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-medium mb-3 shadow-sm">
                 <span>Mã phòng: {room.maPhong}</span>
               </div>
-              
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-4 leading-tight">
+
+              {/* Room title */}
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-3 leading-tight">
                 {room.tenPhong || room.loaiphong?.tenLoaiPhong || "Phòng"}
               </h1>
-              
-              <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-4">
-                <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-3 py-1 border border-white/40">
+
+              {/* Room details */}
+              <div className="flex flex-wrap items-center gap-3 text-gray-600 mb-3">
+                <div className="flex items-center gap-1.5 bg-white/60 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/40">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium text-gray-700">{room.rating}</span>
+                  <span className="font-medium text-gray-700 text-sm">{room.rating}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 text-sm">
                   <MapPin className="h-4 w-4" />
                   <span>{room.loaiphong?.tenLoaiPhong}</span>
                 </div>
               </div>
-              
-              <Badge 
-                className={`${
-                  room.tinhTrang === "Còn trống" || room.tinhTrang === "Trống"
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/30"
-                    : "bg-red-500/20 text-red-300 border-red-400/30"
-                } px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm border`}
+
+              {/* Status badge */}
+              <Badge
+                className={`${room.tinhTrang === "Còn trống" || room.tinhTrang === "Trống"
+                    ? "bg-emerald-500/20 text-emerald-700 border-emerald-400/30 hover:bg-emerald-500/30"
+                    : "bg-red-500/20 text-red-700 border-red-400/30 hover:bg-red-500/30"
+                  } px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm border transition-colors duration-200`}
               >
-                <CheckCircle className="h-3 w-3 mr-2" />
+                <CheckCircle className="h-3 w-3 mr-1.5" />
                 {room.tinhTrang}
               </Badge>
             </div>
-            
-              <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="rounded-xl border-indigo-300 bg-white/70 backdrop-blur-sm text-indigo-700 hover:bg-white/90 hover:border-indigo-400">
-                <Heart className="h-4 w-4 mr-2" />
-                Yêu thích
+
+            {/* Right side - Action buttons */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-indigo-300 bg-white/70 backdrop-blur-sm text-indigo-700 hover:bg-white/90 hover:border-indigo-400 transition-all duration-200 px-3 py-2"
+              >
+                <Heart className="h-4 w-4 mr-1.5" />
+                <span className="text-sm">Yêu thích</span>
               </Button>
-              <Button variant="outline" size="sm" className="rounded-xl border-indigo-300 bg-white/70 backdrop-blur-sm text-indigo-700 hover:bg-white/90 hover:border-indigo-400">
-                <Share2 className="h-4 w-4 mr-2" />
-                Chia sẻ
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-indigo-300 bg-white/70 backdrop-blur-sm text-indigo-700 hover:bg-white/90 hover:border-indigo-400 transition-all duration-200 px-3 py-2"
+              >
+                <Share2 className="h-4 w-4 mr-1.5" />
+                <span className="text-sm">Chia sẻ</span>
               </Button>
             </div>
           </div>
@@ -192,10 +206,10 @@ export default function RoomDetail() {
       <section className="py-8 md:py-12">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
+
             {/* Left Column - Room Details */}
             <div className="lg:col-span-8 space-y-8">
-              
+
               {/* Image Gallery */}
               <div className="relative">
                 <Card className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden group">
@@ -204,26 +218,25 @@ export default function RoomDetail() {
                       src={room.hinhAnh ? `/img/rooms/${room.hinhAnh}` : "/placeholder.svg?height=500&width=800"}
                       alt={room.tenPhong || "Phòng"}
                       fill
-                      className={`object-cover object-center transition-all duration-700 group-hover:scale-110 ${
-                        imageLoaded ? 'opacity-100' : 'opacity-0'
-                      }`}
+                      className={`object-cover object-center transition-all duration-700 group-hover:scale-110 ${imageLoaded ? 'opacity-100' : 'opacity-0'
+                        }`}
                       sizes="(max-width: 1024px) 100vw, 66vw"
                       priority
                       onLoad={() => setImageLoaded(true)}
                     />
-                    
+
                     {!imageLoaded && (
                       <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse" />
                     )}
-                    
+
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   </div>
                 </Card>
               </div>
-              
+
               {/* Room Information Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+
                 {/* Description */}
                 <Card className="bg-white rounded-2xl shadow-lg border-0 p-6 md:col-span-2">
                   <div className="flex items-center gap-3 mb-6">
@@ -234,7 +247,7 @@ export default function RoomDetail() {
                   </div>
                   <p className="text-gray-600 leading-relaxed text-base">{room.moTa}</p>
                 </Card>
-                
+
                 {/* Room Details */}
                 <Card className="bg-white rounded-2xl shadow-lg border-0 p-6">
                   <div className="flex items-center gap-3 mb-6">
@@ -273,7 +286,7 @@ export default function RoomDetail() {
                     </div>
                   </div>
                 </Card>
-                
+
                 {/* Amenities */}
                 <Card className="bg-white rounded-2xl shadow-lg border-0 p-6">
                   <div className="flex items-center gap-3 mb-6">
@@ -317,7 +330,7 @@ export default function RoomDetail() {
                       <div className="text-sm text-gray-300 font-medium">mỗi đêm</div>
                     </div>
                   </div>
-                  
+
                   {/* Booking Form */}
                   <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 gap-4">
@@ -333,7 +346,7 @@ export default function RoomDetail() {
                           <div className="text-sm font-semibold text-gray-800">Chọn ngày</div>
                         </div>
                       </div>
-                      
+
                       <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl hover:shadow-md transition-all duration-300">
                         <Users className="h-6 w-6 mx-auto mb-2 text-purple-600" />
                         <div className="text-xs text-gray-500 mb-1">Số khách</div>
@@ -342,7 +355,7 @@ export default function RoomDetail() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <Button
                       size="lg"
                       disabled={room.tinhTrang !== "Trống" && room.tinhTrang !== "Còn trống"}
@@ -358,7 +371,7 @@ export default function RoomDetail() {
                         </span>
                       </div>
                     </Button>
-                    
+
                     {(room.tinhTrang === "Trống" || room.tinhTrang === "Còn trống") && (
                       <div className="text-center p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl">
                         <p className="text-sm text-emerald-700 font-medium">

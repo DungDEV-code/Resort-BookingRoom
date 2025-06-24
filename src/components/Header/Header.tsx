@@ -1,10 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, UserCircle2, MessageSquare, Settings, LogOut, UserRound, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Account from "../Account-setting/Account";
 import ContactSupportForm from "../Contact/ContactSupportForm";
+import BookingManagement from "../BookingManagement/BookingManagement";
 
 const navigationItems = [
   { name: "Trang Chủ", href: "#index" },
@@ -29,9 +29,16 @@ const navigationItems = [
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const { user, setUser } = useAuth(); // ✅ dùng context để xác định trạng thái đăng nhập
-  const [showAccountSettings, setShowAccountSettings] = useState(false)
-  const [showContact, setShowContact] = useState(false)
+  const { user, setUser } = useAuth();
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [showContact, setShowContact] = useState(false);
+  const [showBookingManagement, setShowBookingManagement] = useState(false);
+
+  // Debug log để kiểm tra trạng thái
+  useEffect(() => {
+    console.log("showBookingManagement:", showBookingManagement);
+  }, [showBookingManagement]);
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-[#f8fafc]/90 backdrop-blur-md supports-[backdrop-filter]:bg-[#f8fafc]/70 shadow-md">
@@ -64,18 +71,19 @@ function Header() {
           <div className="hidden md:flex items-center space-x-4 pr-4">
             {user ? (
               <>
-                {/* 👇 Icon quản lý đơn đặt phòng */}
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-10 w-10 text-[#1e90ff] border-2 border-[#1e90ff] rounded-full p-1 bg-white shadow hover:bg-[#1e90ff]/10"
-                  onClick={() => router.push("/booking/history")}
+                  onClick={() => {
+                    console.log("CalendarCheck clicked");
+                    setShowBookingManagement(true);
+                  }}
                   title="Quản lý đặt phòng"
                 >
                   <CalendarCheck className="h-6 w-6" />
                 </Button>
 
-                {/* 👇 Dropdown user menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -102,9 +110,9 @@ function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/logout", { method: "POST" })
-                        setUser(null)
-                        router.push("/")
+                        await fetch("/api/logout", { method: "POST" });
+                        setUser(null);
+                        router.push("/");
                       }}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
@@ -154,15 +162,27 @@ function Header() {
                         variant="outline"
                         className="border-[#1e90ff] text-[#1e90ff] hover:bg-[#1e90ff]/10 px-4"
                         onClick={() => {
+                          console.log("Quản Lý Đặt Phòng clicked (mobile)");
                           setIsOpen(false);
-                          router.push("/account");
+                          setShowBookingManagement(true);
+                        }}
+                      >
+                        Quản Lý Đặt Phòng
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="border-[#1e90ff] text-[#1e90ff] hover:bg-[#1e90ff]/10 px-4"
+                        onClick={() => {
+                          setIsOpen(false);
+                          setShowAccountSettings(true);
                         }}
                       >
                         Cài Đặt Tài Khoản
                       </Button>
                       <Button
                         className="bg-red-600 text-white hover:bg-red-700 px-4"
-                        onClick={() => {
+                        onClick={async () => {
+                          await fetch("/api/logout", { method: "POST" });
                           setUser(null);
                           setIsOpen(false);
                           router.push("/");
@@ -172,19 +192,17 @@ function Header() {
                       </Button>
                     </>
                   ) : (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="default"
-                        className="border-[#1e90ff] text-[#1e90ff] hover:bg-[#1e90ff]/10 px-4"
-                        onClick={() => {
-                          setIsOpen(false);
-                          router.push("/auth");
-                        }}
-                      >
-                        Đăng Nhập
-                      </Button>
-                    </>
+                    <Button
+                      variant="outline"
+                      size="default"
+                      className="border-[#1e90ff] text-[#1e90ff] hover:bg-[#1e90ff]/10 px-4"
+                      onClick={() => {
+                        setIsOpen(false);
+                        router.push("/auth");
+                      }}
+                    >
+                      Đăng Nhập
+                    </Button>
                   )}
                   <Button size="default" className="bg-[#1e90ff] text-white hover:bg-[#ffd700] hover:text-[#1e293b] px-4">
                     <Link href="/rooms">Đặt Phòng</Link>
@@ -195,14 +213,14 @@ function Header() {
           </div>
         )}
       </header>
-      {/* ✅ Đặt ngay sau header, nhưng vẫn nằm trong JSX */}
-      {
-        showAccountSettings && (
-          <Account open={showAccountSettings} onClose={() => setShowAccountSettings(false)} />
-        )
-      }
+      {showAccountSettings && (
+        <Account open={showAccountSettings} onClose={() => setShowAccountSettings(false)} />
+      )}
       {showContact && (
         <ContactSupportForm open={showContact} onClose={() => setShowContact(false)} />
+      )}
+      {showBookingManagement && (
+        <BookingManagement open={showBookingManagement} onClose={() => setShowBookingManagement(false)} />
       )}
     </>
   );

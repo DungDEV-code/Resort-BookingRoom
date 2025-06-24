@@ -77,11 +77,11 @@ function RoomType(
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-2xl font-bold text-sky-600">
-                  {price?.toLocaleString("vi-VN")}₫
+                  {price?.toLocaleString("vi-VN")} VND
                 </span>
                 {originalPrice && (
                   <span className="text-sm text-muted-foreground line-through">
-                    {originalPrice.toLocaleString("vi-VN")}₫
+                    {originalPrice.toLocaleString("vi-VN")} VND
                   </span>
                 )}
               </div>

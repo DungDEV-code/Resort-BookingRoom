@@ -156,7 +156,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-6 h-6" />
                       <span className="text-3xl font-bold">
-                        {Number(service.giaDV).toLocaleString("vi-VN")}₫
+                        {Number(service.giaDV).toLocaleString("vi-VN")} VND
                       </span>
                     </div>
                   </div>
