@@ -1,7 +1,7 @@
 'use client'
 import React from 'react'
 import Image from "next/image"
-import { ArrowRight, Eye, Star } from "lucide-react"
+import { ArrowRight, ChevronRight, Eye, Sparkles, Star } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -109,11 +109,17 @@ function RoomType({
         </div>
       </div>
 
+
       <CardFooter className="p-6 pt-0">
-        <Button asChild variant="default" className="w-full bg-sky-600 hover:bg-sky-700">
-          <Link href={`/rooms/RoomType/${maLoaiPhong}`} className="flex items-center justify-center gap-2">
-            <Eye className="h-4 w-4" />
-            Xem Chi Tiết
+        <Button
+          asChild
+          variant="default"
+          className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white hover:from-indigo-700 hover:via-purple-700 hover:to-indigo-700 w-full px-8 py-4 text-lg rounded-xl shadow-xl font-semibold transition-all duration-500 transform hover:scale-105 hover:shadow-2xl ring-2 ring-purple-400/40 hover:ring-purple-500/70 group"
+        >
+          <Link href={`/rooms/RoomType/${maLoaiPhong}`} className="flex items-center justify-center gap-2 relative z-10">
+            <span className="relative z-10">Xem Chi Tiết</span>
+            <Sparkles className="h-5 w-5 transform transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out pointer-events-none" />
           </Link>
         </Button>
       </CardFooter>

@@ -12,23 +12,18 @@ import {
   MapPin,
   CreditCard,
   CheckCircle,
-  XCircle,
   Clock,
   Home,
   Eye,
-  User,
-  Phone,
-  Mail,
-  Banknote,
-  Receipt,
   Package,
-  X,
-  Star as StarIcon,
   MessageSquare,
+  Star as StarIcon,
+  Receipt,
 } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { Textarea } from "../ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
+import { Toaster, toast } from "sonner";
 
 interface ServiceDetail {
   ma: string;
@@ -180,7 +175,14 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
 
   const handleSubmitComment = async () => {
     if (!selectedBooking || !user || rating === 0 || !comment.trim()) {
-      alert("Vui lòng nhập đánh giá và bình luận trước khi gửi!");
+      toast.error("Lỗi", {
+        description: "Vui lòng nhập đánh giá và bình luận trước khi gửi!",
+        duration: 5000,
+        style: {
+          background: "rgb(254, 226, 226)",
+          border: "1px solid rgb(248, 113, 113)",
+        },
+      });
       return;
     }
 
@@ -198,12 +200,26 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
       });
 
       if (!response.ok) throw new Error("Gửi bình luận thất bại");
-      alert("Bình luận đã được gửi thành công!");
+      toast.success("Thành công", {
+        description: "Bình luận đã được gửi thành công!",
+        duration: 5000,
+        style: {
+          background: "linear-gradient(to right, rgb(219, 234, 254), rgb(233, 213, 255))",
+          border: "1px solid rgb(147, 197, 253)",
+        },
+      });
       setComment("");
       setRating(0);
       setSelectedBooking(null);
     } catch (err) {
-      alert("Đã xảy ra lỗi khi gửi bình luận");
+      toast.error("Lỗi", {
+        description: "Đã xảy ra lỗi khi gửi bình luận",
+        duration: 5000,
+        style: {
+          background: "rgb(254, 226, 226)",
+          border: "1px solid rgb(248, 113, 113)",
+        },
+      });
     }
   };
 
@@ -483,6 +499,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
 
   return (
     <>
+      <Toaster richColors position="top-right" duration={5000} />
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-4 border-b border-gray-100">
