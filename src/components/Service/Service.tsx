@@ -1,7 +1,7 @@
 import type React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Compass, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ export function Service({
     <Card className="overflow-hidden transition-all group relative hover:shadow-xl p-0">
       <div className="relative w-full h-64 overflow-hidden">
         <Image
-          src={`/img/${anhDV || "placeholder.svg"}`}
+          src={`/img/services/${anhDV || "placeholder.svg"}`}
           alt={tenDV}
           fill
           className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
@@ -77,16 +77,16 @@ export function Service({
       <Link
         href={`/services/${maDV}`}
         className="absolute inset-x-6 bottom-4 
-             text-center text-white font-semibold text-base
-             opacity-0 translate-y-8 group-hover:opacity-100 group-hover:translate-y-0
-             transition-all duration-500 ease-in-out
-             rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600
-             shadow-lg hover:shadow-xl px-6 py-3
-             group/link"
+       text-center text-white font-semibold text-base
+       opacity-0 translate-y-8 group-hover:opacity-100 group-hover:translate-y-0
+       transition-all duration-500 ease-in-out
+       rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600
+       shadow-lg hover:shadow-xl px-6 py-3
+       group/link"
       >
         <span className="relative z-10 flex items-center justify-center gap-2">
           Khám Phá
-          <Sparkles className="h-5 w-5 transform transition-transform duration-300 group-hover/link:scale-110" />
+          <Compass className="h-5 w-5 transform transition-transform duration-300 group-hover/link:scale-110" />
         </span>
         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-150%] group-hover/link:translate-x-[150%] transition-transform duration-1000 ease-in-out pointer-events-none" />
       </Link>

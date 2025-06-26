@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -21,10 +22,13 @@ import {
   Banknote,
   Receipt,
   Package,
-  X
+  X,
+  Star as StarIcon,
+  MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { Textarea } from "../ui/textarea";
 
 interface ServiceDetail {
   ma: string;
@@ -76,6 +80,8 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [comment, setComment] = useState("");
+  const [rating, setRating] = useState(0);
 
   useEffect(() => {
     if (user && open) {
@@ -100,25 +106,13 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     }
   }, [user, open]);
 
-  // Format tiền tệ VND
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case "Check_in":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Check_out":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
   };
 
   const getPaymentStatusColor = (isPaid: boolean) => {
@@ -135,12 +129,10 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     return diffDays;
   };
 
-  // Kiểm tra xem có check-in và check-out không
   const hasCheckInOut = (booking: Booking) => {
     return booking.check_in && booking.check_out;
   };
 
-  // Render thông tin thời gian dựa trên check-in/check-out hoặc thời gian đặt
   const renderTimeInfo = (booking: Booking) => {
     if (hasCheckInOut(booking)) {
       return (
@@ -186,6 +178,35 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     }
   };
 
+  const handleSubmitComment = async () => {
+    if (!selectedBooking || !user || rating === 0 || !comment.trim()) {
+      alert("Vui lòng nhập đánh giá và bình luận trước khi gửi!");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maDatPhong: selectedBooking.maDatPhong,
+          maPhong: selectedBooking.phong.maPhong,
+          noiDung: comment,
+          danhGia: rating,
+          tenKhachHang: user.name,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Gửi bình luận thất bại");
+      alert("Bình luận đã được gửi thành công!");
+      setComment("");
+      setRating(0);
+      setSelectedBooking(null);
+    } catch (err) {
+      alert("Đã xảy ra lỗi khi gửi bình luận");
+    }
+  };
+
   const renderBookingDetail = () => {
     if (!selectedBooking) return null;
 
@@ -195,6 +216,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
       : 1;
     const roomPrice = selectedBooking.phong?.gia ? selectedBooking.phong.gia * stayDuration : 0;
     const serviceTotal = selectedBooking.dichvudatphong?.reduce((sum, service) => sum + service.thanhTien, 0) || 0;
+    const isCheckOut = selectedBooking.trangThai === "Check_out";
 
     return (
       <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
@@ -357,6 +379,39 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                 </div>
               </div>
             </div>
+
+            {/* Comment Section (only for Check_out status) */}
+            {isCheckOut && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2 text-yellow-600" />
+                  Gửi đánh giá của bạn
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    {[...Array(5)].map((_, index) => (
+                      <StarIcon
+                        key={index}
+                        className={`w-6 h-6 cursor-pointer ${index < rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                        onClick={() => setRating(index + 1)}
+                      />
+                    ))}
+                  </div>
+                  <Textarea
+                    placeholder="Viết đánh giá của bạn về phòng..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                  <Button
+                    onClick={handleSubmitComment}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
+                  >
+                    Gửi đánh giá
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -416,7 +471,8 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           </div>
           <Button
             onClick={() => setSelectedBooking(booking)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 opacity-0 group-hover:opacity-100">
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 opacity-0 group-hover:opacity-100"
+          >
             <Eye className="w-4 h-4" />
             <span>Xem chi tiết</span>
           </Button>

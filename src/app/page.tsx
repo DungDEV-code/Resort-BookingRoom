@@ -14,21 +14,32 @@ import type { RoomTypeProps } from "@/components/Room/RoomType";
 import Service, { Services } from "@/components/Service/Service";
 import AnimatedSection from "@/components/ui/AnimatedSection";
 
+// Hàm xáo trộn mảng với kiểu dữ liệu rõ ràng
+function shuffleArray<T extends Services>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 const banners = [
   { src: '/img/banner1.jpg', alt: 'ảnh' },
   { src: '/img/banner2.webp', alt: 'ảnh' },
   { src: '/img/banner3.webp', alt: 'ảnh' },
   { src: '/img/banner4.jpg', alt: 'ảnh' },
 ];
+
 const iconMap: Record<string, JSX.Element> = {
   spa: <Sparkles className="h-6 w-6" />,
   dining: <Utensils className="h-6 w-6" />,
   beach: <Waves className="h-6 w-6" />,
-  massage: <Sparkles className="h-6 w-6" />,       // dùng chung icon spa
+  massage: <Sparkles className="h-6 w-6" />,
   restaurant: <Utensils className="h-6 w-6" />,
-  bar: <Utensils className="h-6 w-6" />,           // tạm thời dùng icon chung
+  bar: <Utensils className="h-6 w-6" />,
   pool: <Waves className="h-6 w-6" />,
-  gym: <FaDumbbell className="h-6 w-6" />,         // import thêm từ react-icons nếu muốn
+  gym: <FaDumbbell className="h-6 w-6" />,
   yoga: <FaLeaf className="h-6 w-6" />,
   kids: <FaChild className="h-6 w-6" />,
   golf: <FaGolfBall className="h-6 w-6" />,
@@ -48,36 +59,41 @@ const colorMap: Record<string, string> = {
   dining: "bg-orange-500",
   beach: "bg-blue-500",
 };
+
 export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [rooms, setRooms] = useState<RoomTypeProps[]>([]);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [services, setServices] = useState<Services[]>([]);
 
-  // Tự động chuyển ảnh sau mỗi 3 giây
+  // Tự động chuyển ảnh banner
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch và xáo trộn dịch vụ, chỉ lấy 6 dịch vụ
   useEffect(() => {
     fetch("/api/services")
       .then((res) => res.json())
-      .then((data) => {
-        const enrichedServices = data.map((service: any, index: number) => ({
+      .then((data: Services[]) => {
+        const enrichedServices = data.map((service: Services, index: number) => ({
           ...service,
-          // giaDV: service.giaDV, // Example pricing
           anhDV: service.anhDV || `/img/service${index + 1}.jpg`,
           features: featuresMap[service.maDV] || ["Dịch vụ cao cấp", "Trải nghiệm độc đáo"],
           icon: iconMap[service.maDV] || <Sparkles className="h-6 w-6" />,
           color: colorMap[service.maDV] || "bg-gray-500",
         }));
-        setServices(enrichedServices);
+        // Xáo trộn và lấy 6 dịch vụ
+        const shuffledServices = shuffleArray(enrichedServices).slice(0, 6);
+        setServices(shuffledServices);
       })
       .catch((error) => console.error("Error fetching services:", error));
   }, []);
 
+  // Fetch dữ liệu phòng
   useEffect(() => {
     fetch("/api/roomType")
       .then((res) => res.json())
@@ -88,8 +104,8 @@ export default function Home() {
 
           return {
             ...rooms,
-            price: basePrice - discountStep, // giá giảm dần
-            originalPrice: basePrice,        // giá gốc cố định
+            price: basePrice - discountStep,
+            originalPrice: basePrice,
             amenities: ["Wifi miễn phí", "Ban công riêng", "Điều hòa", "Mini Bar"],
             rating: 4.5 + (index % 2) * 0.3,
             isPopular: index % 2 === 0
@@ -99,20 +115,21 @@ export default function Home() {
       });
   }, []);
 
+  // Tự động cuộn carousel phòng
   useEffect(() => {
     const interval = setInterval(() => {
       if (carouselRef.current) {
         const container = carouselRef.current;
-        const scrollAmount = container.querySelector('div')?.clientWidth || 0; // scroll từng card
+        const scrollAmount = container.querySelector('div')?.clientWidth || 0;
         const maxScrollLeft = container.scrollWidth - container.clientWidth;
 
         if (container.scrollLeft + scrollAmount >= maxScrollLeft) {
-          container.scrollTo({ left: 0, behavior: 'smooth' }); // quay về đầu
+          container.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
           container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
       }
-    }, 4000); // mỗi 4 giây
+    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
@@ -129,8 +146,7 @@ export default function Home() {
               src={banner.src}
               alt={banner.alt}
               fill
-              className={`object-cover transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'
-                }`}
+              className={`object-cover transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
               priority={index === 0}
             />
           ))}
@@ -214,10 +230,7 @@ export default function Home() {
         </section>
 
         {/* Room Types Section */}
-
-
         <section id="roomtype" className="py-20 bg-gradient-to-br from-slate-50 via-sky-50 to-blue-50 relative overflow-hidden">
-          {/* Background Decorative - giảm bớt để nhẹ nhàng hơn */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-24 -left-24 w-52 h-52 bg-sky-200/10 rounded-full blur-2xl"></div>
             <div className="absolute -bottom-24 -right-24 w-52 h-52 bg-pink-300/10 rounded-full blur-2xl"></div>
@@ -240,7 +253,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Carousel Section */}
             <div className="relative">
               <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none"></div>
               <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none"></div>
@@ -254,36 +266,25 @@ export default function Home() {
               >
                 {rooms.map((room, index) => (
                   <div
-                    key={index}
-                    className="flex-shrink-0 w-[85vw] sm:w-[47vw] md:w-[32vw] lg:w-[calc((100%-2rem)/3)] snap-start group"
+                    key={room.maLoaiPhong || index}
+                    className="flex-shrink-0 w-[85vw] sm:w-[47vw] md:w-[32vw] lg:w-[calc((100%-2rem)/3)] snap-start"
                   >
-                    <div className="relative mx-1 my-2 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1">
-                      {room.isPopular && (
-                        <div className="absolute top-2 left-2 z-10">
-                          <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
-                            🔥 Phổ Biến
-                          </span>
-                        </div>
-                      )}
-                      <div className="relative z-10">
-                        <RoomType
-                          tenLoaiPhong={room.tenLoaiPhong}
-                          moTa={room.moTa}
-                          price={room.price}
-                          originalPrice={room.originalPrice}
-                          hinhAnh={room.hinhAnh}
-                          amenities={room.amenities}
-                          rating={room.rating}
-                          isPopular={room.isPopular}
-                        />
-                      </div>
-                    </div>
+                    <RoomType
+                      maLoaiPhong={room.maLoaiPhong || `room_${index}`} // Fallback tạm thời
+                      tenLoaiPhong={room.tenLoaiPhong}
+                      moTa={room.moTa}
+                      price={room.price}
+                      originalPrice={room.originalPrice}
+                      hinhAnh={room.hinhAnh}
+                      amenities={room.amenities}
+                      rating={room.rating}
+                      isPopular={room.isPopular}
+                    />
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* CTA */}
             <div className="text-center mt-14">
               <Button
                 asChild
@@ -299,7 +300,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Hide Scrollbar */}
           <style jsx>{`
                 .scrollbar-hide {
                   -ms-overflow-style: none;
@@ -311,7 +311,6 @@ export default function Home() {
                 }
               `}</style>
         </section>
-
 
         <AnimatedSection>
           <section id="service" className="bg-sky-50 py-16">
@@ -333,7 +332,6 @@ export default function Home() {
           </section>
         </AnimatedSection>
 
-        {/* Special Offers Section */}
         <section id="benefit" className="py-16 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -367,7 +365,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Phần kêu gọi hành động */}
         <section className="bg-gradient-to-r from-sky-500 to-sky-600 py-16 text-white">
           <div className="container text-center">
             <h2 className="text-3xl font-bold md:text-4xl">Sẵn sàng cho kỳ nghỉ mơ ước?</h2>
@@ -382,7 +379,6 @@ export default function Home() {
       <footer id="Call" className="bg-sky-900 text-white px-6 sm:px-10 lg:px-20">
         <div className="max-w-7xl mx-auto py-12">
           <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
-            {/* Contact Info */}
             <div>
               <h3 className="mb-4 text-lg font-semibold">Paradise Palms Resort</h3>
               <address className="not-italic space-y-2 text-sm">
@@ -405,7 +401,6 @@ export default function Home() {
               </address>
             </div>
 
-            {/* Quick Links */}
             <div>
               <h3 className="mb-4 text-lg font-semibold">Quick Links</h3>
               <ul className="space-y-2 text-sm text-sky-100">
@@ -426,7 +421,6 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* Resort Map */}
             <div>
               <h3 className="mb-4 text-lg font-semibold">Vị Trí Khu Nghỉ Dưỡng</h3>
               <div className="aspect-video w-full overflow-hidden rounded-lg bg-sky-800">
@@ -442,7 +436,6 @@ export default function Home() {
               <p className="mt-2 text-xs text-sky-300">Nằm bên bờ biển Paradise tuyệt đẹp</p>
             </div>
 
-            {/* Newsletter & Social */}
             <div>
               <h3 className="mb-4 text-lg font-semibold">Stay Connected</h3>
               <p className="mb-4 text-sm">Subscribe for exclusive offers and updates</p>
@@ -472,12 +465,11 @@ export default function Home() {
 
           <div className="mt-10 border-t border-white/20 pt-6 text-center">
             <p className="text-sm text-sky-200">
-              &copy; {new Date().getFullYear()} Paradise Palms Resort. All rights reserved.
+              © {new Date().getFullYear()} Paradise Palms Resort. All rights reserved.
             </p>
           </div>
         </div>
       </footer>
-
     </div>
   );
 }

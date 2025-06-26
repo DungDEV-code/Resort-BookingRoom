@@ -62,7 +62,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl opacity-20 group-hover:opacity-30 transition duration-300"></div>
                 <div className="relative h-80 rounded-xl overflow-hidden bg-white">
                   <Image
-                    src={service.anhDV?.startsWith("/") ? service.anhDV : `/img/${service.anhDV}`}
+                    src={service.anhDV?.startsWith("/") ? service.anhDV : `/img/services/${service.anhDV}`}
                     alt={service.tenDV}
                     fill
                     className="object-cover"

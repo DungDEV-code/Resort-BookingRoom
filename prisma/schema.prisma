@@ -21,6 +21,7 @@ model datphong {
   phong          phong               @relation(fields: [maPhong], references: [maPhong], onDelete: NoAction, onUpdate: NoAction, map: "datphong_ibfk_2")
   dichvudatphong dichvudatphong[]
   hoadon         hoadon[]
+  binhluan       binhluan[]
 
   @@index([maKhachHang], map: "maKhachHang")
   @@index([maPhong], map: "maPhong")
@@ -140,6 +141,19 @@ model roleadminuser {
   nhanvien    nhanvien[]
 }
 
+model binhluan {
+  maBinhLuan String              @id @db.VarChar(20)
+  maDatPhong String              @db.VarChar(20)
+  noiDung    String              @db.Text
+  danhGia    Int                 @default(5) @db.TinyInt
+  thoiGianBL DateTime            @default(now()) @db.Timestamp(0)
+  trangThai  binhluan_trangThai? @default(ChoPheDuyet)
+
+  datphong datphong @relation(fields: [maDatPhong], references: [maDatPhong], onDelete: NoAction, onUpdate: NoAction, map: "binhluan_ibfk_1")
+
+  @@index([maDatPhong], map: "maDatPhong")
+}
+
 enum hoadon_trangThaiHD {
   ChuaThanhToan @map("Chưa Thanh Toán")
   DaThanhToan   @map("Đã Thanh Toán")
@@ -187,4 +201,10 @@ enum lichlamviec_trangThaiCV {
 enum hoadon_phuongThucThanhToan {
   TienMat     @map("Tiền mặt")
   ChuyenKhoan @map("Chuyển khoản")
+}
+
+enum binhluan_trangThai {
+  ChoPheDuyet @map("Chờ Phê Duyệt")
+  DaPheDuyet  @map("Đã Phê Duyệt")
+  BiTuChoi    @map("Bị Từ Chối")
 }

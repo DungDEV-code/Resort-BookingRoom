@@ -1,10 +1,9 @@
 'use client'
 import React from 'react'
 import Image from "next/image"
-import { ArrowRight, Star } from "lucide-react"
+import { ArrowRight, Eye, Star } from "lucide-react"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -13,31 +12,38 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
 export interface RoomTypeProps {
-  // maLoaiPhong: string
+  maLoaiPhong: string // Thêm để dùng cho URL chi tiết
   tenLoaiPhong: string
   moTa: string
   hinhAnh: string
-  price?: number;
-  originalPrice?: number;
-  amenities?: string[];
-  rating?: number;
-  isPopular?: boolean;
+  price?: number
+  originalPrice?: number
+  priceRange?: { min: number; max: number } // Thêm để hiển thị khoảng giá
+  amenities?: string[]
+  rating?: number
+  isPopular?: boolean
 }
 
-function RoomType(
-  {
-    // maLoaiPhong,
-    tenLoaiPhong,
-    moTa,
-    hinhAnh,
-    price,
-    originalPrice,
-    amenities,
-    rating,
-    isPopular
-  }: RoomTypeProps) {
+function RoomType({
+  maLoaiPhong,
+  tenLoaiPhong,
+  moTa,
+  hinhAnh,
+  price,
+  originalPrice,
+  priceRange,
+  amenities,
+  rating,
+  isPopular,
+}: RoomTypeProps) {
+
+  // Hàm định dạng giá
+  const formatPrice = (value: number) => value.toLocaleString("vi-VN") + " VND"
+  const formatPriceRange = (range: { min: number; max: number }) =>
+    `từ ${formatPrice(range.min)} đến ${formatPrice(range.max)}`
 
   return (
     <Card className="w-full h-full overflow-hidden transition-all hover:shadow-xl group p-0 border-0 rounded-xl">
@@ -53,10 +59,12 @@ function RoomType(
             Phổ Biến
           </Badge>
         )}
-        <div className="absolute top-4 right-4 flex items-center space-x-1 bg-white/90 px-2 py-1 rounded-full">
-          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-          <span className="text-xs font-medium">{rating}</span>
-        </div>
+        {rating && (
+          <div className="absolute top-4 right-4 flex items-center space-x-1 bg-white/90 px-2 py-1 rounded-full">
+            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <span className="text-xs font-medium">{rating}</span>
+          </div>
+        )}
       </div>
 
       <div className="p-6 bg-white rounded-b-xl">
@@ -66,23 +74,33 @@ function RoomType(
         </div>
 
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-1">
-            {amenities?.map((amenity, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
-                {amenity}
-              </Badge>
-            ))}
-          </div>
+          {amenities && amenities.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {amenities.map((amenity, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  {amenity}
+                </Badge>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-2xl font-bold text-sky-600">
-                  {price?.toLocaleString("vi-VN")} VND
-                </span>
-                {originalPrice && (
-                  <span className="text-sm text-muted-foreground line-through">
-                    {originalPrice.toLocaleString("vi-VN")} VND
+                {priceRange ? (
+                  <span className="text-2xl font-bold text-sky-600">
+                    {formatPriceRange(priceRange)}
                   </span>
+                ) : (
+                  <>
+                    <span className="text-2xl font-bold text-sky-600">
+                      {price ? formatPrice(price) : "Liên hệ"}
+                    </span>
+                    {originalPrice && (
+                      <span className="text-sm text-muted-foreground line-through">
+                        {formatPrice(originalPrice)}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
               <span className="text-sm text-muted-foreground">/ đêm</span>
@@ -90,6 +108,15 @@ function RoomType(
           </div>
         </div>
       </div>
+
+      <CardFooter className="p-6 pt-0">
+        <Button asChild variant="default" className="w-full bg-sky-600 hover:bg-sky-700">
+          <Link href={`/rooms/RoomType/${maLoaiPhong}`} className="flex items-center justify-center gap-2">
+            <Eye className="h-4 w-4" />
+            Xem Chi Tiết
+          </Link>
+        </Button>
+      </CardFooter>
     </Card>
   )
 }
