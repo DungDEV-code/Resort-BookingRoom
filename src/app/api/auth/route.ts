@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { roleadminuser_role, roleadminuser_trangThaiTk } from "@/generated/prisma"
 import jwt from "jsonwebtoken"
 import { serialize } from "cookie"
-import bcrypt from "bcrypt";
+import bcrypt from "bcrypt"
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -22,8 +23,15 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ message: "Tài khoản không tồn tại." }, { status: 404 })
     }
-    const isPasswordCorrect = await bcrypt.compare(password, user.passWord);
-    // Kiểm tra mật khẩu (plaintext - nên hash bằng bcryp t trong tương lai)
+
+    // So sánh mật khẩu: nếu đã hash rồi (bắt đầu bằng $2), dùng bcrypt, ngược lại so sánh trực tiếp
+    let isPasswordCorrect = false;
+    if (user.passWord.startsWith("$2")) {
+      isPasswordCorrect = await bcrypt.compare(password, user.passWord);
+    } else {
+      isPasswordCorrect = password === user.passWord;
+    }
+
     if (!isPasswordCorrect) {
       return NextResponse.json({ message: "Sai mật khẩu." }, { status: 401 });
     }
@@ -52,7 +60,7 @@ export async function POST(req: NextRequest) {
         email: user.email,
         userName: user.userName,
         role: user.role,
-        trangThaiTk: user.trangThaiTk, // Quan trọng! Trả về đúng ENUM key (DangHoatDong, BiKhoa)
+        trangThaiTk: user.trangThaiTk,
       },
     });
 
@@ -61,7 +69,7 @@ export async function POST(req: NextRequest) {
       serialize("auth_token", token, {
         httpOnly: true,
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 ngày
+        maxAge: 60 * 60 * 24 * 7,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
       })

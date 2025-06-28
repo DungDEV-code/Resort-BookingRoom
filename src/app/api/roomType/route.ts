@@ -5,21 +5,24 @@ export async function GET() {
   try {
     const rooms = await prisma.loaiphong.findMany({
       select: {
-        maLoaiPhong: true, // Thêm maLoaiPhong vào select
+        maLoaiPhong: true,
         tenLoaiPhong: true,
         moTa: true,
         hinhAnh: true,
+        gia_min: true,
+        gia_max: true,
       },
     });
 
-    // Thêm các trường bổ sung nếu cần (ví dụ: price, amenities, v.v.)
     const enrichedRooms = rooms.map((room) => ({
       ...room,
-      price: 6000000, // Giá mặc định hoặc logic tính giá
-      originalPrice: 6000000,
-      amenities: ["Wifi miễn phí", "Ban công riêng", "Điều hòa", "Mini Bar"], // Mảng tiện ích mặc định
-      rating: 4.5, // Đánh giá mặc định
-      isPopular: false, // Trạng thái phổ biến mặc định
+      priceRange: {
+        min: room.gia_min || 0,
+        max: room.gia_max || 0,
+      },
+      amenities: ["Wifi miễn phí", "Ban công riêng", "Điều hòa", "Mini Bar"],
+      rating: 4.5,
+      isPopular: false,
     }));
 
     return NextResponse.json(enrichedRooms);

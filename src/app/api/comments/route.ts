@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 // Types for better type safety
 interface DecodedToken {
@@ -36,6 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Parse and validate request body
     const body: CommentRequestBody = await req.json();
+    console.log('Received body:', body);
     const validationResult = validateCommentData(body);
     
     if (!validationResult.success) {
@@ -116,58 +119,82 @@ export async function POST(req: NextRequest) {
  */
 async function authenticateUser(req: NextRequest): Promise<AuthResult> {
   const token = req.cookies.get("auth_token")?.value;
-  
-  if (!token) {
-    return {
-      success: false,
-      message: "Không được phép truy cập - Vui lòng đăng nhập",
-      status: 401
-    };
-  }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
-    
-    const user = await prisma.roleadminuser.findUnique({
-      where: { email: decoded.email },
-      include: {
-        khachhang: {
-          select: {
-            maKhachHang: true
+  // 1. Nếu có auth_token → decode bình thường
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
+
+      const user = await prisma.roleadminuser.findUnique({
+        where: { email: decoded.email },
+        include: {
+          khachhang: {
+            select: { maKhachHang: true }
           }
         }
-      }
-    });
+      });
 
-    if (!user?.khachhang?.[0]?.maKhachHang) {
+      if (!user?.khachhang?.maKhachHang) {
+        return {
+          success: false,
+          message: "Không tìm thấy thông tin khách hàng",
+          status: 404
+        };
+      }
+
+      return {
+        success: true,
+        maKhachHang: user.khachhang.maKhachHang
+      };
+
+    } catch (error) {
       return {
         success: false,
-        message: "Không tìm thấy thông tin khách hàng",
-        status: 404
+        message: "Token không hợp lệ",
+        status: 401
       };
     }
+  }
+ const session = await getServerSession(authOptions);
 
-    return {
-      success: true,
-      maKhachHang: user.khachhang[0].maKhachHang
-    };
-
-  } catch (error: unknown) {
+  const email = session?.user?.email;
+  if (!email) {
     return {
       success: false,
-      message: "Token không hợp lệ",
+      message: "Không xác định được người dùng",
       status: 401
     };
   }
-}
 
+  const user = await prisma.roleadminuser.findUnique({
+    where: { email },
+    include: {
+      khachhang: {
+        select: { maKhachHang: true }
+      }
+    }
+  });
+
+  if (!user?.khachhang?.maKhachHang) {
+    return {
+      success: false,
+      message: "Không tìm thấy thông tin khách hàng",
+      status: 404
+    };
+  }
+
+  return {
+    success: true,
+    maKhachHang: user.khachhang.maKhachHang
+  };
+}
 /**
  * Validate comment request data
  */
 function validateCommentData(body: any): { success: boolean; message?: string } {
   const { maDatPhong, noiDung, danhGia } = body;
 
-  if (!maDatPhong || !noiDung || danhGia === undefined) {
+  if (!maDatPhong || !noiDung || danhGia == null){
     return {
       success: false,
       message: 'Thiếu thông tin bắt buộc (maDatPhong, noiDung, danhGia)'
@@ -181,10 +208,10 @@ function validateCommentData(body: any): { success: boolean; message?: string } 
     };
   }
 
-  if (typeof noiDung !== 'string' || noiDung.trim().length < 10) {
+  if (typeof noiDung !== 'string' || noiDung.trim().length < 1) {
     return {
       success: false,
-      message: 'Nội dung bình luận phải có ít nhất 10 ký tự'
+      message: 'Nội dung bình luận phải có ít nhất 1 ký tự'
     };
   }
 

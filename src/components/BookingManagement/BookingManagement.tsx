@@ -187,7 +187,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
   };
 
   const handleSubmitComment = async () => {
-    if (!selectedBooking || email|| rating === 0 || !comment.trim()) {
+    if (!selectedBooking || !email || rating === 0 || !comment.trim()) { 
       toast.error("Lỗi", {
         description: "Vui lòng nhập đánh giá và bình luận trước khi gửi!",
         duration: 5000,

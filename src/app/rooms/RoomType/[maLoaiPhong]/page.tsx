@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
-import { Users, Bed, Star, ArrowLeft, Calendar, Heart, Share2, Camera, MapPin, CheckCircle, Settings, Wifi, Car, Dumbbell, Waves, Wind, Tv, Refrigerator, Zap } from 'lucide-react';
+import { Users, Bed, Star, ArrowLeft, Heart, Share2, Camera, MapPin, CheckCircle, Settings, Wifi, Car, Dumbbell, Waves, Wind, Tv, Refrigerator, Zap } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ interface RoomType {
     hinhAnh: string;
     soNguoi: number;
     soGiuong: number;
-    priceRange: { min: number; max: number };
+    priceRange: { min: number; max: number; formatted?: string };
     amenities: string[];
     rating?: number;
     totalRooms?: number;
@@ -30,22 +30,12 @@ interface Room {
     maPhong: string;
     tenPhong: string;
     gia: number;
+    formattedGia: string;
     tinhTrang: phong_tinhTrang | null;
     hinhAnh: string;
 }
 
 // Constants
-const availableAmenities = [
-    "Wi-Fi miễn phí",
-    "Chỗ đậu xe",
-    "Phòng gym",
-    "Hồ bơi",
-    "Điều hòa",
-    "Tivi",
-    "Tủ lạnh",
-    "Máy sấy tóc",
-];
-
 const TINH_TRANG_MAP: Record<string, string> = {
     [phong_tinhTrang.Trong]: "Còn trống",
     [phong_tinhTrang.DaDat]: "Đã đặt",
@@ -89,11 +79,11 @@ export default function RoomTypeDetail() {
     }, [maLoaiPhong]);
 
     // Helper functions
-    const formatPrice = (price: number) =>
-        new Intl.NumberFormat("vi-VN", { style: "decimal" }).format(price).concat(" VND");
+    const formatPrice = (price: number, includeCurrency: boolean = false) =>
+        `${new Intl.NumberFormat("vi-VN", { useGrouping: true }).format(price)}${includeCurrency ? " VND" : ""}`;
 
-    const formatPriceRange = (range: { min: number; max: number }) =>
-        `${formatPrice(range.min)} - ${formatPrice(range.max)}`;
+    const formatPriceRange = (range: { min: number; max: number; formatted?: string }) =>
+        range.formatted || `${formatPrice(range.min)} - ${formatPrice(range.max, true)}`;
 
     // Loading state
     if (loading) {
@@ -206,42 +196,79 @@ export default function RoomTypeDetail() {
                         {/* Left Column - Room Details */}
                         <div className="lg:col-span-2 space-y-6">
                             {/* Main Image & Description */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Main Image */}
-                                <Card className="overflow-hidden shadow-md border border-gray-200 bg-white">
-                                    <div className="relative w-full h-48 md:h-56">
-                                        <Image
-                                            src={
-                                                roomType.hinhAnh
-                                                    ? `/img/${roomType.hinhAnh}`
-                                                    : "/placeholder.jpg"
-                                            }
-                                            alt={roomType.tenLoaiPhong}
-                                            fill
-                                            className={`object-cover ${
-                                                imageLoaded ? "opacity-100" : "opacity-0"
+                            <div className="space-y-6">
+                                {/* Main Image - Full Width */}
+                                <div className="relative w-full h-80 md:h-96 rounded-2xl overflow-hidden shadow-lg border border-gray-200 bg-white">
+                                    <Image
+                                        src={
+                                            roomType.hinhAnh
+                                                ? `/img/${roomType.hinhAnh}`
+                                                : "/placeholder.jpg"
+                                        }
+                                        alt={`Hình ảnh ${roomType.tenLoaiPhong}`}
+                                        fill
+                                        className={`object-cover rounded-2xl ${imageLoaded ? "opacity-100" : "opacity-0"
                                             } transition-opacity duration-500`}
-                                            sizes="(max-width: 768px) 100vw, 50vw"
-                                            onLoad={() => setImageLoaded(true)}
-                                        />
-                                        {!imageLoaded && (
-                                            <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                                        )}
+                                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 66vw, 50vw"
+                                        onLoad={() => setImageLoaded(true)}
+                                        priority
+                                    />
+                                    {!imageLoaded && (
+                                        <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center rounded-2xl">
+                                            <Camera className="h-12 w-12 text-gray-400" />
+                                        </div>
+                                    )}
+                                    
+                                    {/* Image Overlay with Room Type Info */}
+                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-6 rounded-b-2xl">
+                                        <div className="text-white">
+                                            <h2 className="text-xl font-bold mb-1">{roomType.tenLoaiPhong}</h2>
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <div className="flex items-center gap-1">
+                                                    <Users className="h-4 w-4" />
+                                                    <span>{roomType.soNguoi} khách</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Bed className="h-4 w-4" />
+                                                    <span>{roomType.soGiuong} giường</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </Card>
+                                </div>
 
                                 {/* Description */}
-                                <Card className="shadow-md border border-gray-200 bg-white">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Settings className="h-5 w-5 text-blue-600" />
-                                            <h2 className="text-lg font-bold text-gray-800">
+                                <Card className="shadow-md border border-gray-200 bg-white rounded-xl">
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="p-2 bg-blue-100 rounded-lg">
+                                                <Settings className="h-5 w-5 text-blue-600" />
+                                            </div>
+                                            <h2 className="text-xl font-bold text-gray-800">
                                                 Mô tả loại phòng
                                             </h2>
                                         </div>
-                                        <p className="text-gray-600 text-sm leading-relaxed">
-                                            {roomType.moTa}
-                                        </p>
+                                        <div className="prose prose-gray max-w-none">
+                                            <p className="text-gray-700 text-base leading-relaxed mb-4">
+                                                {roomType.moTa}
+                                            </p>
+                                            
+                                            {/* Additional Info */}
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                                                <div className="flex items-start gap-3">
+                                                    <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                                    <div>
+                                                        <h4 className="font-semibold text-blue-900 mb-1">
+                                                            Thông tin phòng {roomType.tenLoaiPhong}
+                                                        </h4>
+                                                        <p className="text-blue-800 text-sm">
+                                                            Loại phòng này được thiết kế phù hợp cho {roomType.soNguoi} khách với {roomType.soGiuong} giường thoải mái, 
+                                                            đầy đủ tiện nghi hiện đại để mang lại trải nghiệm lưu trú tuyệt vời.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -330,62 +357,11 @@ export default function RoomTypeDetail() {
                                     </h2>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {roomType.rooms?.slice(0, 6).map((room) => (
-                                            <div
+                                            <RoomCard
                                                 key={room.maPhong}
-                                                className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow"
-                                            >
-                                                <div className="relative h-24 w-full mb-2 rounded-lg overflow-hidden">
-                                                    <Image
-                                                        src={`/img/rooms/${
-                                                            room.hinhAnh || "placeholder.jpg"
-                                                        }`}
-                                                        alt={room.tenPhong}
-                                                        fill
-                                                        className="object-cover"
-                                                        onLoad={() => setImageLoaded(true)}
-                                                    />
-                                                    {!imageLoaded && (
-                                                        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                                                    )}
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <h4 className="font-semibold text-sm text-gray-800 truncate">
-                                                            {room.tenPhong}
-                                                        </h4>
-                                                        <Badge
-                                                            className={`text-xs ${
-                                                                room.tinhTrang ===
-                                                                phong_tinhTrang.Trong
-                                                                    ? "bg-green-100 text-green-700"
-                                                                    : "bg-red-100 text-red-700"
-                                                            }`}
-                                                        >
-                                                            {TINH_TRANG_MAP[
-                                                                room.tinhTrang ||
-                                                                    phong_tinhTrang.Trong
-                                                            ]}
-                                                        </Badge>
-                                                    </div>
-                                                    <p className="text-sm font-bold text-blue-600">
-                                                        {formatPrice(room.gia)}
-                                                    </p>
-                                                    <Button
-                                                        size="sm"
-                                                        className="w-full text-xs"
-                                                        disabled={
-                                                            room.tinhTrang !== phong_tinhTrang.Trong
-                                                        }
-                                                        onClick={() =>
-                                                            router.push(`/rooms/${room.maPhong}`)
-                                                        }
-                                                    >
-                                                        {room.tinhTrang === phong_tinhTrang.Trong
-                                                            ? "Xem chi tiết"
-                                                            : "Không khả dụng"}
-                                                    </Button>
-                                                </div>
-                                            </div>
+                                                room={room}
+                                                router={router}
+                                            />
                                         ))}
                                     </div>
                                     {roomType.rooms && roomType.rooms.length > 6 && (
@@ -459,7 +435,7 @@ export default function RoomTypeDetail() {
                                         </div>
 
                                         {/* Action Button */}
-                                      
+
                                     </CardContent>
                                 </Card>
                             </div>
@@ -467,6 +443,61 @@ export default function RoomTypeDetail() {
                     </div>
                 </div>
             </section>
+        </div>
+    );
+}
+
+// Separate component for room cards to avoid duplication
+interface RoomCardProps {
+    room: Room;
+    router: any;
+}
+
+function RoomCard({ room, router }: RoomCardProps) {
+    const [roomImageLoaded, setRoomImageLoaded] = useState(false);
+
+    return (
+        <div className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+            <div className="relative h-24 w-full mb-2 rounded-lg overflow-hidden">
+                <Image
+                    src={`/img/rooms/${room.hinhAnh || "placeholder.jpg"}`}
+                    alt={room.tenPhong}
+                    fill
+                    className={`object-cover ${roomImageLoaded ? "opacity-100" : "opacity-0"} transition-opacity duration-300 rounded-lg`}
+                    onLoad={() => setRoomImageLoaded(true)}
+                />
+                {!roomImageLoaded && (
+                    <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-lg" />
+                )}
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm text-gray-800 truncate">
+                        {room.tenPhong}
+                    </h4>
+                    <Badge
+                        className={`text-xs ${room.tinhTrang === phong_tinhTrang.Trong
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                            }`}
+                    >
+                        {TINH_TRANG_MAP[room.tinhTrang || phong_tinhTrang.Trong]}
+                    </Badge>
+                </div>
+                <p className="text-sm font-bold text-blue-600">
+                    {room.formattedGia}
+                </p>
+                <Button
+                    size="sm"
+                    className="w-full text-xs"
+                    disabled={room.tinhTrang !== phong_tinhTrang.Trong}
+                    onClick={() => router.push(`/rooms/${room.maPhong}`)}
+                >
+                    {room.tinhTrang === phong_tinhTrang.Trong
+                        ? "Xem chi tiết"
+                        : "Không khả dụng"}
+                </Button>
+            </div>
         </div>
     );
 }

@@ -254,14 +254,16 @@ export default function Home() {
             </div>
 
             <div className="relative">
+              {/* Hiệu ứng gradient hai bên */}
               <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none"></div>
               <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none"></div>
 
+              {/* Carousel cuộn ngang */}
               <div
                 ref={carouselRef}
                 className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide gap-4 pb-10 pt-4 px-2"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(59,130,246,0.03), rgba(147,51,234,0.03))'
+                  background: 'linear-gradient(135deg, rgba(59,130,246,0.03), rgba(147,51,234,0.03))',
                 }}
               >
                 {rooms.map((room, index) => (
@@ -270,12 +272,11 @@ export default function Home() {
                     className="flex-shrink-0 w-[85vw] sm:w-[47vw] md:w-[32vw] lg:w-[calc((100%-2rem)/3)] snap-start"
                   >
                     <RoomType
-                      maLoaiPhong={room.maLoaiPhong || `room_${index}`} // Fallback tạm thời
+                      maLoaiPhong={room.maLoaiPhong}
                       tenLoaiPhong={room.tenLoaiPhong}
                       moTa={room.moTa}
-                      price={room.price}
-                      originalPrice={room.originalPrice}
                       hinhAnh={room.hinhAnh}
+                      priceRange={room.priceRange} // ✅ Đúng field cần truyền
                       amenities={room.amenities}
                       rating={room.rating}
                       isPopular={room.isPopular}

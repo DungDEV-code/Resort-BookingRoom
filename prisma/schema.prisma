@@ -71,19 +71,19 @@ model hoadon {
   @@index([maDatPhong], map: "maDatPhong")
 }
 
+
 model khachhang {
-  maKhachHang   String        @id @db.VarChar(20)
-  maUser        String        @db.VarChar(50)
-  tenKhachHang  String        @db.VarChar(50)
-  ngaySinh      DateTime      @db.Date
-  gioiTinh      String        @db.VarChar(10)
-  diaChi        String        @db.VarChar(100)
-  soDienThoai   String        @db.VarChar(15)
-  maMembership  String?       @db.VarChar(20) // Reference to membership tier
+  maKhachHang  String   @id @db.VarChar(20)
+  maUser       String   @unique @db.VarChar(50)
+  tenKhachHang String   @db.VarChar(50)
+  ngaySinh     DateTime @db.Date
+  gioiTinh     String   @db.VarChar(10)
+  diaChi       String   @db.VarChar(100)
+  soDienThoai  String   @db.VarChar(15)
+  maMembership String?  @db.VarChar(20)
   datphong      datphong[]
   roleadminuser roleadminuser @relation(fields: [maUser], references: [email], onDelete: NoAction, onUpdate: NoAction, map: "khachhang_ibfk_1")
   membership    membership?   @relation(fields: [maMembership], references: [maMembership], onDelete: NoAction, onUpdate: NoAction, map: "khachhang_ibfk_2")
-
   @@index([maUser], map: "maUser")
   @@index([maMembership], map: "maMembership")
 }
@@ -98,24 +98,25 @@ model lichlamviec {
   trangThaiCV   lichlamviec_trangThaiCV?
   nhanvien      nhanvien                 @relation(fields: [maNhanVien], references: [maNhanVien], onDelete: NoAction, onUpdate: NoAction, map: "lichlamviec_ibfk_1")
   phong         phong                    @relation(fields: [maPhong], references: [maPhong], onDelete: NoAction, onUpdate: NoAction, map: "lichlamviec_ibfk_2")
-
   @@index([maNhanVien], map: "maNhanVien")
   @@index([maPhong], map: "maPhong")
 }
 
 model loaiphong {
-  maLoaiPhong  String  @id @db.VarChar(20)
-  tenLoaiPhong String  @db.VarChar(50)
-  moTa         String  @db.Text
-  hinhAnh      String  @db.VarChar(255)
-  soNguoi      Int     @default(2)
-  soGiuong     Int     @default(1)
+  maLoaiPhong  String   @id @db.VarChar(20)
+  tenLoaiPhong String   @db.VarChar(50)
+  moTa         String   @db.Text
+  hinhAnh      String   @db.VarChar(255)
+  soNguoi      Int      @default(2)
+  soGiuong     Int      @default(1)
+  gia_min      Decimal? @db.Decimal(10, 2)
+  gia_max      Decimal? @db.Decimal(10, 2)
   phong        phong[]
 }
 
 model nhanvien {
   maNhanVien       String                     @id @db.VarChar(20)
-  maUser           String                     @db.VarChar(50)
+  maUser           String                     @unique @db.VarChar(50)
   tenNhanVien      String                     @db.VarChar(50)
   soDienThoai      String                     @db.VarChar(15)
   trangThaiLamViec nhanvien_trangThaiLamViec?
@@ -148,8 +149,8 @@ model roleadminuser {
   passWord    String                     @db.VarChar(100)
   trangThaiTk roleadminuser_trangThaiTk?
   role        roleadminuser_role?
-  khachhang   khachhang[]
-  nhanvien    nhanvien[]
+  khachhang   khachhang?
+  nhanvien    nhanvien?
 }
 
 model binhluan {
@@ -160,15 +161,14 @@ model binhluan {
   thoiGianBL DateTime            @default(now()) @db.Timestamp(0)
   trangThai  binhluan_trangThai? @default(ChoPheDuyet)
   datphong   datphong            @relation(fields: [maDatPhong], references: [maDatPhong], onDelete: NoAction, onUpdate: NoAction, map: "binhluan_ibfk_1")
-
   @@index([maDatPhong], map: "maDatPhong")
 }
 
 enum membershipLevel {
-  Bronze    @map("Đồng")
-  Silver    @map("Bạc")
-  Gold      @map("Vàng")
-  Diamond   @map("Kim Cương")
+  Bronze  @map("Đồng")
+  Silver  @map("Bạc")
+  Gold    @map("Vàng")
+  Diamond @map("Kim Cương")
 }
 
 enum hoadon_trangThaiHD {

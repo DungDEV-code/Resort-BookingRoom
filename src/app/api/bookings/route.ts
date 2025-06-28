@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 
-// Types
 interface DecodedToken {
   email: string;
   userName: string;
@@ -33,38 +32,36 @@ interface FormattedBooking {
       soGiuong: number;
     };
   };
-  dichvudatphong: Array<{
+  dichvudatphong: {
     ma: string;
     tenDichVuLucDat: string;
     donGiaLucDat: number;
     soLuong: number;
     thanhTien: number;
-  }>;
-  hoadon: Array<{
+  }[];
+  hoadon: {
     maHD: string;
     phuongThucThanhToan: string;
     trangThaiHD: string | null;
     tongTien: number;
     ngayTaoHD: string;
-  }>;
+  }[];
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Xác thực qua token hoặc email
     const authResult = await getMaKhachHangFromRequest(req);
     if (!authResult.success) {
       return NextResponse.json({ message: authResult.message }, { status: authResult.status });
     }
 
-    // 2. Truy vấn đơn đặt phòng
-    const bookings = await getCustomerBookings(authResult.maKhachHang!);
-    const result = formatAndCategorizeBookings(bookings);
+    const bookings = await getCustomerBookings(authResult.maKhachHang);
+    const result = categorizeBookings(bookings);
 
     return NextResponse.json(result, { status: 200 });
 
   } catch (error) {
-    console.error("Lỗi lấy dữ liệu booking:", error);
+    console.error("Lỗi lấy lịch sử đặt phòng:", error);
     return NextResponse.json({ message: "Lỗi server nội bộ" }, { status: 500 });
   }
 }
@@ -74,53 +71,37 @@ async function getMaKhachHangFromRequest(req: NextRequest): Promise<
   | { success: false; message: string; status: number }
 > {
   const token = req.cookies.get("auth_token")?.value;
-  const emailFromQuery = req.nextUrl.searchParams.get("email");
+  const email = req.nextUrl.searchParams.get("email");
+
+  let emailToUse: string | null = null;
 
   if (token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
-      const user = await prisma.roleadminuser.findUnique({
-        where: { email: decoded.email },
-        include: {
-          khachhang: {
-            select: { maKhachHang: true },
-          },
-        },
-      });
-
-      if (!user?.khachhang?.[0]?.maKhachHang) {
-        return { success: false, message: "Không tìm thấy khách hàng", status: 404 };
-      }
-
-      return { success: true, maKhachHang: user.khachhang[0].maKhachHang };
-    } catch (error) {
+      emailToUse = decoded.email;
+    } catch (err) {
       return { success: false, message: "Token không hợp lệ", status: 401 };
     }
+  } else if (email) {
+    emailToUse = email;
+  } else {
+    return { success: false, message: "Không được phép truy cập", status: 401 };
   }
 
-  // Nếu không có token, thử lấy từ email query
-  if (emailFromQuery) {
-    const user = await prisma.roleadminuser.findUnique({
-      where: { email: emailFromQuery },
-      include: {
-        khachhang: {
-          select: { maKhachHang: true },
-        },
-      },
-    });
+  const user = await prisma.roleadminuser.findUnique({
+    where: { email: emailToUse },
+    include: { khachhang: true },
+  });
 
-    if (!user?.khachhang?.[0]?.maKhachHang) {
-      return { success: false, message: "Không tìm thấy khách hàng", status: 404 };
-    }
-
-    return { success: true, maKhachHang: user.khachhang[0].maKhachHang };
+  if (!user?.khachhang) {
+    return { success: false, message: "Không tìm thấy khách hàng", status: 404 };
   }
 
-  return { success: false, message: "Không được phép truy cập", status: 401 };
+  return { success: true, maKhachHang: user.khachhang.maKhachHang };
 }
 
 async function getCustomerBookings(maKhachHang: string) {
-  return await prisma.datphong.findMany({
+  return prisma.datphong.findMany({
     where: { maKhachHang },
     include: {
       phong: {
@@ -157,33 +138,33 @@ async function getCustomerBookings(maKhachHang: string) {
   });
 }
 
-function formatAndCategorizeBookings(bookings: any[]): BookingStatus {
-  const formattedBookings: FormattedBooking[] = bookings.map((booking) => ({
-    maDatPhong: booking.maDatPhong,
-    check_in: formatDateToString(booking.check_in),
-    check_out: formatDateToString(booking.check_out),
-    trangThai: booking.trangThai,
-    tongTien: Number(booking.tongTien),
-    thoiGianDat: booking.thoiGianDat.toISOString(),
+function categorizeBookings(bookings: any[]): BookingStatus {
+  const formatted = bookings.map((b): FormattedBooking => ({
+    maDatPhong: b.maDatPhong,
+    check_in: formatDateToString(b.check_in),
+    check_out: formatDateToString(b.check_out),
+    trangThai: b.trangThai,
+    tongTien: Number(b.tongTien),
+    thoiGianDat: b.thoiGianDat.toISOString(),
     phong: {
-      maPhong: booking.phong.maPhong,
-      tenPhong: booking.phong.tenPhong,
-      gia: Number(booking.phong.gia),
-      hinhAnh: booking.phong.hinhAnh,
+      maPhong: b.phong.maPhong,
+      tenPhong: b.phong.tenPhong,
+      gia: Number(b.phong.gia),
+      hinhAnh: b.phong.hinhAnh,
       loaiphong: {
-        tenLoaiPhong: booking.phong.loaiphong.tenLoaiPhong,
-        soNguoi: booking.phong.loaiphong.soNguoi,
-        soGiuong: booking.phong.loaiphong.soGiuong,
+        tenLoaiPhong: b.phong.loaiphong.tenLoaiPhong,
+        soNguoi: b.phong.loaiphong.soNguoi,
+        soGiuong: b.phong.loaiphong.soGiuong,
       },
     },
-    dichvudatphong: booking.dichvudatphong.map((dichvu: any) => ({
-      ma: dichvu.ma,
-      tenDichVuLucDat: dichvu.tenDichVuLucDat,
-      donGiaLucDat: Number(dichvu.donGiaLucDat),
-      soLuong: dichvu.soLuong,
-      thanhTien: Number(dichvu.ThanhTien),
+    dichvudatphong: b.dichvudatphong.map((dv: any) => ({
+      ma: dv.ma,
+      tenDichVuLucDat: dv.tenDichVuLucDat,
+      donGiaLucDat: Number(dv.donGiaLucDat),
+      soLuong: dv.soLuong,
+      thanhTien: Number(dv.ThanhTien),
     })),
-    hoadon: booking.hoadon.map((hd: any) => ({
+    hoadon: b.hoadon.map((hd: any) => ({
       maHD: hd.maHD,
       phuongThucThanhToan: hd.phuongThucThanhToan,
       trangThaiHD: hd.trangThaiHD,
@@ -192,10 +173,11 @@ function formatAndCategorizeBookings(bookings: any[]): BookingStatus {
     })),
   }));
 
-  const newBookings = formattedBookings.filter((b) => b.trangThai === null);
-  const oldBookings = formattedBookings.filter((b) => b.trangThai === "Check_in" || b.trangThai === "Check_out");
-
-  return { new: newBookings, old: oldBookings, all: formattedBookings };
+  return {
+    new: formatted.filter(b => b.trangThai === null),
+    old: formatted.filter(b => b.trangThai === "Check_in" || b.trangThai === "Check_out"),
+    all: formatted,
+  };
 }
 
 function formatDateToString(date: Date | null): string {

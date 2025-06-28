@@ -1,11 +1,9 @@
+
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState, useMemo } from "react"
-
 import Image from "next/image"
-
 import {
   Search,
   Users,
@@ -22,7 +20,6 @@ import {
   User,
   CreditCard,
 } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -134,24 +131,40 @@ export default function RoomsPage() {
   useEffect(() => {
     fetch("/api/rooms")
       .then((res) => res.json())
-      .then((data) => {
-        const enhancedData = data.map((room: Room) => ({
-          ...room,
-          rating: room.rating || (Math.random() * 2 + 3).toFixed(1),
-          tienNghi: room.tienNghi || generateRandomAmenities(),
-        }))
-        setRooms(enhancedData)
+      .then((response) => {
+        if (response.success && Array.isArray(response.data)) {
+          const enhancedData = response.data.map((room: Room) => ({
+            ...room,
+            rating: room.rating || Number((Math.random() * 2 + 3).toFixed(1)),
+            tienNghi: room.tienNghi || generateRandomAmenities(),
+          }))
+          setRooms(enhancedData)
+        } else {
+          console.error("Invalid response format or no data:", response)
+          setRooms([])
+        }
       })
-      .catch((err) => console.error("Error fetching rooms:", err))
+      .catch((err) => {
+        console.error("Error fetching rooms:", err)
+        setRooms([])
+      })
   }, [])
 
   useEffect(() => {
     fetch("/api/services")
       .then((res) => res.json())
       .then((data) => {
-        setServices(data)
+        if (Array.isArray(data)) {
+          setServices(data)
+        } else {
+          console.error("Invalid services response format:", data)
+          setServices([])
+        }
       })
-      .catch((err) => console.error("Error fetching services:", err))
+      .catch((err) => {
+        console.error("Error fetching services:", err)
+        setServices([])
+      })
   }, [])
 
   const uniqueRoomTypes = useMemo(() => {
@@ -345,6 +358,7 @@ export default function RoomsPage() {
   const getTomorrowDate = () => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
+
     return tomorrow.toISOString().split("T")[0]
   }
 
@@ -354,7 +368,6 @@ export default function RoomsPage() {
     return dayAfter.toISOString().split("T")[0]
   }
 
-  // Helper function to truncate service description
   const truncateDescription = (text: string, wordLimit = 15) => {
     const words = text.split(" ")
     if (words.length <= wordLimit) return text
@@ -398,13 +411,13 @@ export default function RoomsPage() {
             <div className="flex gap-4 lg:gap-8">
               <aside
                 className={`
-                ${showFilters ? "block" : "hidden"} lg:block
-                w-full lg:w-80 lg:flex-shrink-0
-                fixed lg:static top-0 left-0 right-0 bottom-0 z-50 lg:z-auto
-                bg-white lg:bg-transparent
-                p-4 lg:p-0
-                overflow-y-auto lg:overflow-visible
-              `}
+                  ${showFilters ? "block" : "hidden"} lg:block
+                  w-full lg:w-80 lg:flex-shrink-0
+                  fixed lg:static top-0 left-0 right-0 bottom-0 z-50 lg:z-auto
+                  bg-white lg:bg-transparent
+                  p-4 lg:p-0
+                  overflow-y-auto lg:overflow-visible
+                `}
               >
                 <div className="lg:hidden flex justify-between items-center mb-4">
                   <h2 className="text-lg font-semibold">Bộ lọc & Tìm kiếm</h2>
@@ -609,11 +622,10 @@ export default function RoomsPage() {
 
                           <div className="absolute bottom-4 left-4 backdrop-blur-md border border-white/30 px-3 py-2 rounded-2xl text-xs font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300 pointer-events-none">
                             <div
-                              className={`${
-                                room.tinhTrang === "Còn trống" || room.tinhTrang === "Trống"
+                              className={`${room.tinhTrang === "Còn trống" || room.tinhTrang === "Trống"
                                   ? "bg-emerald-500/90 text-white"
                                   : "bg-red-500/90 text-white"
-                              } px-3 py-1 rounded-xl`}
+                                } px-3 py-1 rounded-xl`}
                             >
                               {room.tinhTrang}
                             </div>
@@ -716,7 +728,6 @@ export default function RoomsPage() {
           </div>
         </section>
 
-        {/* Booking Modal - Optimized for compactness */}
         <Dialog open={isBookingModalOpen} onOpenChange={setIsBookingModalOpen}>
           <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
             <DialogHeader className="pb-4">
@@ -727,7 +738,6 @@ export default function RoomsPage() {
             </DialogHeader>
 
             <form onSubmit={handleSubmitBooking} className="space-y-6">
-              {/* Room Info - Larger */}
               <div className="bg-sky-50 p-5 rounded-2xl border border-sky-200">
                 <div className="flex items-center gap-5">
                   {selectedRoom && (
@@ -754,7 +764,6 @@ export default function RoomsPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - Customer Info */}
                 <div className="space-y-5">
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
@@ -831,7 +840,6 @@ export default function RoomsPage() {
                     </div>
                   </div>
 
-                  {/* Booking Details */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
                       <Calendar className="h-5 w-5" />
@@ -869,7 +877,6 @@ export default function RoomsPage() {
                     </div>
                   </div>
 
-                  {/* Payment Method - Select dropdown */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
                       <CreditCard className="h-5 w-5" />
@@ -920,7 +927,6 @@ export default function RoomsPage() {
                   </div>
                 </div>
 
-                {/* Middle Column - Services */}
                 <div className="space-y-5">
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
@@ -928,7 +934,6 @@ export default function RoomsPage() {
                       Dịch vụ bổ sung
                     </h3>
 
-                    {/* Services Grid */}
                     <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-2xl p-4 bg-gray-50">
                       <div className="space-y-3">
                         {services.map((service) => (
@@ -1007,9 +1012,7 @@ export default function RoomsPage() {
                   </div>
                 </div>
 
-                {/* Right Column - Summary */}
                 <div className="space-y-5">
-                  {/* Selected Services Summary */}
                   {bookingForm.dichVuDat.length > 0 && (
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-2xl border border-purple-200">
                       <div className="flex items-center justify-between mb-4">
@@ -1053,7 +1056,6 @@ export default function RoomsPage() {
                     </div>
                   )}
 
-                  {/* Price Summary */}
                   {bookingForm.checkIn && bookingForm.checkOut && (
                     <div className="bg-gradient-to-r from-sky-50 to-blue-50 p-5 rounded-2xl border border-sky-200">
                       <h3 className="text-lg font-semibold text-sky-800 mb-4">Tổng kết đặt phòng</h3>
@@ -1063,7 +1065,7 @@ export default function RoomsPage() {
                           <span className="font-medium">
                             {Math.ceil(
                               (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
-                                (1000 * 60 * 60 * 24),
+                              (1000 * 60 * 60 * 24),
                             )}{" "}
                             đêm
                           </span>
@@ -1079,7 +1081,7 @@ export default function RoomsPage() {
                               formatPrice(
                                 Math.ceil(
                                   (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
-                                    (1000 * 60 * 60 * 24),
+                                  (1000 * 60 * 60 * 24),
                                 ) * selectedRoom.gia,
                               )}
                           </span>
@@ -1116,7 +1118,6 @@ export default function RoomsPage() {
                 </div>
               </div>
 
-              {/* Submit Buttons */}
               <div className="flex gap-4 pt-6 border-t">
                 <Button
                   type="button"
