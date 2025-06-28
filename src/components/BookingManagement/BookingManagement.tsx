@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster, toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 interface ServiceDetail {
   ma: string;
@@ -69,7 +70,7 @@ interface BookingManagementProps {
 }
 
 const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) => {
-  const { user } = useAuth();
+
   const [newBookings, setNewBookings] = useState<Booking[]>([]);
   const [oldBookings, setOldBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,17 +78,20 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [comment, setComment] = useState("");
   const [rating, setRating] = useState(0);
+  const { user: localUser } = useAuth();
+  const { data: session } = useSession();
 
+  const email = session?.user?.email || localUser?.email;
+  const displayName = session?.user?.name || localUser?.name;
   useEffect(() => {
-    if (user && open) {
+    if (email && open) {
       const fetchBookings = async () => {
         setLoading(true);
         setError(null);
         try {
-          const response = await fetch("/api/bookings");
-          if (!response.ok) {
-            throw new Error("Không thể tải dữ liệu đặt phòng");
-          }
+          const response = await fetch(`/api/bookings?email=${encodeURIComponent(email)}`);
+          if (!response.ok) throw new Error("Không thể tải dữ liệu đặt phòng");
+
           const data = await response.json();
           setNewBookings(data.new);
           setOldBookings(data.old);
@@ -99,7 +103,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
       };
       fetchBookings();
     }
-  }, [user, open]);
+  }, [email, open]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -123,7 +127,16 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
-
+  // Thêm function để mapping phương thức thanh toán
+  const formatPaymentMethod = (method: string) => {
+    const paymentMethods: { [key: string]: string } = {
+      'TienMat': 'Tiền Mặt',
+      'ChuyenKhoan': 'Chuyển Khoản',
+      'Tiền mặt': 'Tiền Mặt',
+      'Chuyển khoản': 'Chuyển Khoản'
+    };
+    return paymentMethods[method] || method || "N/A";
+  };
   const hasCheckInOut = (booking: Booking) => {
     return booking.check_in && booking.check_out;
   };
@@ -174,7 +187,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
   };
 
   const handleSubmitComment = async () => {
-    if (!selectedBooking || !user || rating === 0 || !comment.trim()) {
+    if (!selectedBooking || email|| rating === 0 || !comment.trim()) {
       toast.error("Lỗi", {
         description: "Vui lòng nhập đánh giá và bình luận trước khi gửi!",
         duration: 5000,
@@ -195,7 +208,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           maPhong: selectedBooking.phong.maPhong,
           noiDung: comment,
           danhGia: rating,
-          tenKhachHang: user.name,
+          ttenKhachHang: displayName,
         }),
       });
 
@@ -385,7 +398,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-gray-600">Phương thức thanh toán</span>
-                  <span className="font-semibold">{selectedBooking.hoadon[0]?.phuongThucThanhToan || "N/A"}</span>
+                  <span className="font-semibold">{formatPaymentMethod(selectedBooking.hoadon[0]?.phuongThucThanhToan || "N/A")}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Trạng thái thanh toán</span>

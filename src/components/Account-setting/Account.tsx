@@ -176,21 +176,26 @@ export default function Account({ open, onClose }: { open: boolean; onClose: () 
   }
 
   const handleSubmit = async () => {
-    const method = isEditing ? "PUT" : "POST"
-    const url = isEditing ? `/api/khachhang/${user.email}` : `/api/khachhang`
+    // Kiểm tra xem khách hàng đã tồn tại chưa
+    const checkRes = await fetch(`/api/khachhang/${user.email}`);
+    const isExist = checkRes.ok;
+
+    const method = isExist ? "PUT" : "POST";
+    const url = isExist ? `/api/khachhang/${user.email}` : `/api/khachhang`;
+
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...formData, maUser: user.email }),
-    })
+    });
 
     if (res.ok) {
-      toast.success(isEditing ? "Cập nhật thành công!" : "Lưu thông tin thành công!")
-      onClose()
+      toast.success(isExist ? "Cập nhật thành công!" : "Lưu thông tin thành công!");
+      onClose();
     } else {
-      toast.error("Đã xảy ra lỗi, vui lòng thử lại!")
+      toast.error("Đã xảy ra lỗi, vui lòng thử lại!");
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

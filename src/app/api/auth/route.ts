@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { roleadminuser_role, roleadminuser_trangThaiTk } from "@/generated/prisma"
 import jwt from "jsonwebtoken"
 import { serialize } from "cookie"
-
+import bcrypt from "bcrypt";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -22,10 +22,10 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ message: "Tài khoản không tồn tại." }, { status: 404 })
     }
-
-    // Kiểm tra mật khẩu (plaintext - nên hash bằng bcrypt trong tương lai)
-    if (user.passWord !== password) {
-      return NextResponse.json({ message: "Sai mật khẩu." }, { status: 401 })
+    const isPasswordCorrect = await bcrypt.compare(password, user.passWord);
+    // Kiểm tra mật khẩu (plaintext - nên hash bằng bcryp t trong tương lai)
+    if (!isPasswordCorrect) {
+      return NextResponse.json({ message: "Sai mật khẩu." }, { status: 401 });
     }
 
     if (

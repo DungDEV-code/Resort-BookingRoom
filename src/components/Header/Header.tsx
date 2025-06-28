@@ -34,10 +34,81 @@ function Header() {
   const [showContact, setShowContact] = useState(false);
   const [showBookingManagement, setShowBookingManagement] = useState(false);
 
+  // Kiểm tra trạng thái đăng nhập khi component mount và khi có thay đổi
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const response = await fetch("/api/me", {
+          method: "GET",
+          credentials: "include", // Đảm bảo gửi cookies
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("User data from API:", data); // Debug log
+          setUser(data.user);
+        } else {
+          // Nếu không có session, clear user
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+        setUser(null);
+      }
+    };
+
+    // Kiểm tra ngay khi component mount
+    checkAuthStatus();
+
+    // Kiểm tra lại khi focus vào window (trường hợp user đăng nhập ở tab khác)
+    const handleFocus = () => {
+      checkAuthStatus();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [setUser]);
+
+  // Kiểm tra URL params để xem có thông báo thành công từ Google login không
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authSuccess = urlParams.get('auth');
+    
+    if (authSuccess === 'success') {
+      // Xóa param khỏi URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      
+      // Kiểm tra lại trạng thái đăng nhập
+      const checkAuthAfterGoogle = async () => {
+        try {
+          const response = await fetch("/api/me", {
+            method: "GET",
+            credentials: "include",
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log("User data after Google login:", data);
+            setUser(data.user);
+          }
+        } catch (error) {
+          console.error("Error after Google login:", error);
+        }
+      };
+      
+      checkAuthAfterGoogle();
+    }
+  }, [setUser]);
+
   // Debug log để kiểm tra trạng thái
   useEffect(() => {
+    console.log("Current user state:", user);
     console.log("showBookingManagement:", showBookingManagement);
-  }, [showBookingManagement]);
+  }, [user, showBookingManagement]);
 
   return (
     <>
@@ -91,10 +162,24 @@ function Header() {
                       size="icon"
                       className="h-10 w-10 text-[#1e90ff] border-2 border-[#ffd700] rounded-full p-1 bg-white shadow hover:bg-[#ffd700]/10"
                     >
-                      <UserRound className="h-8 w-8 text-[#1e90ff]" />
+                      {user.avatar || user.picture ? (
+                        <Image
+                          src={user.avatar || user.picture}
+                          alt="User Avatar"
+                          width={32}
+                          height={32}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <UserRound className="h-8 w-8 text-[#1e90ff]" />
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-48 mt-2 mr-4">
+                    <div className="px-2 py-1.5 text-sm font-medium">
+                      {user.name || user.displayName || user.email}
+                    </div>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => {
                         setShowAccountSettings(true);
@@ -110,9 +195,16 @@ function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/logout", { method: "POST" });
-                        setUser(null);
-                        router.push("/");
+                        try {
+                          await fetch("/api/logout", { 
+                            method: "POST",
+                            credentials: "include"
+                          });
+                          setUser(null);
+                          router.push("/");
+                        } catch (error) {
+                          console.error("Logout error:", error);
+                        }
                       }}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
@@ -158,6 +250,22 @@ function Header() {
                 <div className="flex flex-col space-y-3 pt-6 border-t">
                   {user ? (
                     <>
+                      <div className="flex items-center space-x-2 px-2 py-1">
+                        {user.avatar || user.picture ? (
+                          <Image
+                            src={user.avatar || user.picture}
+                            alt="User Avatar"
+                            width={24}
+                            height={24}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <UserRound className="h-6 w-6 text-[#1e90ff]" />
+                        )}
+                        <span className="text-sm text-[#1e293b]">
+                          {user.name || user.displayName || user.email}
+                        </span>
+                      </div>
                       <Button
                         variant="outline"
                         className="border-[#1e90ff] text-[#1e90ff] hover:bg-[#1e90ff]/10 px-4"
@@ -182,10 +290,17 @@ function Header() {
                       <Button
                         className="bg-red-600 text-white hover:bg-red-700 px-4"
                         onClick={async () => {
-                          await fetch("/api/logout", { method: "POST" });
-                          setUser(null);
-                          setIsOpen(false);
-                          router.push("/");
+                          try {
+                            await fetch("/api/logout", { 
+                              method: "POST",
+                              credentials: "include"
+                            });
+                            setUser(null);
+                            setIsOpen(false);
+                            router.push("/");
+                          } catch (error) {
+                            console.error("Logout error:", error);
+                          }
                         }}
                       >
                         Đăng Xuất
