@@ -1,6 +1,5 @@
 
 "use client"
-
 import type React from "react"
 import { useEffect, useState, useMemo } from "react"
 import Image from "next/image"
@@ -19,6 +18,8 @@ import {
   Calendar,
   User,
   CreditCard,
+  ArrowRight,
+  Check,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +32,11 @@ import Header from "@/components/Header/Header"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import Link from "next/link"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
+import { useAuth } from "@/context/auth-context"
 
 interface Room {
   maPhong: string
@@ -86,13 +92,19 @@ interface BookingForm {
   phuongThucThanhToan: string
   dichVuDat: BookedService[]
 }
-
+interface Customer {
+  tenKhachHang: string
+  soDienThoai: string
+  maUser: string // Used as email
+}
 export default function RoomsPage() {
+  const { user } = useAuth()
   const [rooms, setRooms] = useState<Room[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [bookingStep, setBookingStep] = useState(1)
   const [bookingForm, setBookingForm] = useState<BookingForm>({
     tenKhachHang: "",
     ngaySinh: "",
@@ -166,6 +178,43 @@ export default function RoomsPage() {
         setServices([])
       })
   }, [])
+  // Fetch customer data when user is logged in
+  const [customerData, setCustomerData] = useState<Customer | null>(null)
+  useEffect(() => {
+    if (user?.email) {
+      fetch(`/api/khachhang/${encodeURIComponent(user.email)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error) {
+            console.error("Error fetching customer data:", data.error)
+            setCustomerData(null)
+          } else {
+            setCustomerData({
+              tenKhachHang: data.tenKhachHang || "",
+              soDienThoai: data.soDienThoai || "",
+              maUser: data.maUser || "",
+            })
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching customer data:", err)
+          setCustomerData(null)
+        })
+    } else {
+      setCustomerData(null)
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (customerData) {
+      setBookingForm((prev) => ({
+        ...prev,
+        tenKhachHang: customerData.tenKhachHang,
+        soDienThoai: customerData.soDienThoai,
+        email: customerData.maUser,
+      }))
+    }
+  }, [customerData])
 
   const uniqueRoomTypes = useMemo(() => {
     return [...new Set(rooms.map((room) => room.loaiphong?.tenLoaiPhong).filter(Boolean))]
@@ -230,7 +279,13 @@ export default function RoomsPage() {
   const handleFilterChange = (key: keyof FilterState, value: string | string[]) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
+  const nextStep = () => {
+    if (bookingStep < 3) setBookingStep(bookingStep + 1)
+  }
 
+  const prevStep = () => {
+    if (bookingStep > 1) setBookingStep(bookingStep - 1)
+  }
   const handleAmenityChange = (amenityId: string, checked: boolean) => {
     setFilters((prev) => ({
       ...prev,
@@ -267,21 +322,27 @@ export default function RoomsPage() {
 
   const handleBookNow = (room: Room) => {
     setSelectedRoom(room)
+    setBookingStep(1)
     setIsBookingModalOpen(true)
   }
 
   const calculateTotalPrice = () => {
-    if (!selectedRoom || !bookingForm.checkIn || !bookingForm.checkOut) return 0
+    if (!selectedRoom || !bookingForm.checkIn || !bookingForm.checkOut) return 0;
 
-    const checkIn = new Date(bookingForm.checkIn)
-    const checkOut = new Date(bookingForm.checkOut)
-    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
+    const checkIn = new Date(bookingForm.checkIn);
+    const checkOut = new Date(bookingForm.checkOut);
+    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
-    const roomTotal = nights > 0 ? nights * selectedRoom.gia : 0
-    const servicesTotal = bookingForm.dichVuDat.reduce((total, service) => total + service.thanhTien, 0)
+    const roomTotal =
+      nights > 0 ? nights * Number(selectedRoom.gia) : 0;
 
-    return roomTotal + servicesTotal
-  }
+    const servicesTotal = bookingForm.dichVuDat.reduce(
+      (total, service) => total + Number(service.thanhTien),
+      0
+    );
+
+    return roomTotal + servicesTotal;
+  };
 
   const addService = (service: Service) => {
     const existingService = bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV)
@@ -324,14 +385,14 @@ export default function RoomsPage() {
     e.preventDefault()
 
     if (!bookingForm.tenKhachHang || !bookingForm.soDienThoai || !bookingForm.checkIn || !bookingForm.checkOut) {
-      alert("Vui lòng điền đầy đủ thông tin bắt buộc!")
+      toast("Vui lòng điền đầy đủ thông tin bắt buộc!")
       return
     }
 
     const checkIn = new Date(bookingForm.checkIn)
     const checkOut = new Date(bookingForm.checkOut)
     if (checkOut <= checkIn) {
-      alert("Ngày trả phòng phải sau ngày nhận phòng!")
+      toast("Ngày trả phòng phải sau ngày nhận phòng!")
       return
     }
 
@@ -340,7 +401,7 @@ export default function RoomsPage() {
       customer: bookingForm,
       totalPrice: calculateTotalPrice(),
     })
-    alert("Đặt phòng thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.")
+    toast("Đặt phòng thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.")
     setIsBookingModalOpen(false)
     setBookingForm({
       tenKhachHang: "",
@@ -623,8 +684,8 @@ export default function RoomsPage() {
                           <div className="absolute bottom-4 left-4 backdrop-blur-md border border-white/30 px-3 py-2 rounded-2xl text-xs font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300 pointer-events-none">
                             <div
                               className={`${room.tinhTrang === "Còn trống" || room.tinhTrang === "Trống"
-                                  ? "bg-emerald-500/90 text-white"
-                                  : "bg-red-500/90 text-white"
+                                ? "bg-emerald-500/90 text-white"
+                                : "bg-red-500/90 text-white"
                                 } px-3 py-1 rounded-xl`}
                             >
                               {room.tinhTrang}
@@ -729,172 +790,259 @@ export default function RoomsPage() {
         </section>
 
         <Dialog open={isBookingModalOpen} onOpenChange={setIsBookingModalOpen}>
-          <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
-            <DialogHeader className="pb-4">
-              <DialogTitle className="text-2xl font-bold text-sky-700 flex items-center gap-2">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-emerald-700 flex items-center gap-2">
                 <Calendar className="h-6 w-6" />
-                Đặt phòng - {selectedRoom?.tenPhong || selectedRoom?.loaiphong?.tenLoaiPhong}
+                Đặt phòng - {selectedRoom?.tenPhong}
               </DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmitBooking} className="space-y-6">
-              <div className="bg-sky-50 p-5 rounded-2xl border border-sky-200">
-                <div className="flex items-center gap-5">
-                  {selectedRoom && (
+            {/* Progress Steps */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="flex items-center gap-4">
+                {[1, 2, 3].map((step) => (
+                  <div key={step} className="flex items-center">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${step <= bookingStep ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500"
+                        }`}
+                    >
+                      {step < bookingStep ? <Check className="h-5 w-5" /> : step}
+                    </div>
+                    {step < 3 && (
+                      <div className={`w-16 h-1 mx-2 ${step < bookingStep ? "bg-emerald-600" : "bg-gray-200"}`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Tabs value={bookingStep.toString()} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="1" disabled={bookingStep < 1}>
+                  Thông tin
+                </TabsTrigger>
+                <TabsTrigger value="2" disabled={bookingStep < 2}>
+                  Dịch vụ
+                </TabsTrigger>
+                <TabsTrigger value="3" disabled={bookingStep < 3}>
+                  Xác nhận
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="1" className="space-y-6">
+                {/* Room Info */}
+                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                  <div className="flex items-center gap-4">
                     <Image
                       src={
-                        selectedRoom.hinhAnh
-                          ? `/img/rooms/${selectedRoom.hinhAnh}`
-                          : "/placeholder.svg?height=100&width=150"
+                        selectedRoom?.hinhAnh ? `/img/rooms/${selectedRoom.hinhAnh}` : "/placeholder.svg?height=80&width=120"
                       }
-                      alt={selectedRoom.tenPhong}
-                      width={150}
-                      height={100}
-                      className="rounded-xl object-cover"
+                      alt={selectedRoom?.tenPhong || ""}
+                      width={120}
+                      height={80}
+                      className="rounded-lg object-cover"
                     />
-                  )}
-                  <div>
-                    <h3 className="font-bold text-xl text-sky-800 mb-1">{selectedRoom?.tenPhong}</h3>
-                    <p className="text-sky-600 text-base mb-2">{selectedRoom?.loaiphong?.tenLoaiPhong}</p>
-                    <p className="text-3xl font-bold text-sky-700">
-                      {selectedRoom && formatPrice(selectedRoom.gia)}/đêm
-                    </p>
+                    <div>
+                      <h3 className="font-bold text-lg text-emerald-800">{selectedRoom?.tenPhong}</h3>
+                      <p className="text-emerald-600">{selectedRoom?.loaiphong.tenLoaiPhong}</p>
+                      <p className="text-2xl font-bold text-emerald-700">
+                        {selectedRoom && formatPrice(selectedRoom.gia)}/đêm
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-5">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
-                      <User className="h-5 w-5" />
-                      Thông tin khách hàng
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="tenKhachHang" className="text-sm font-medium text-gray-700">
-                          Họ và tên <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="tenKhachHang"
-                          type="text"
-                          value={bookingForm.tenKhachHang}
-                          onChange={(e) => handleBookingFormChange("tenKhachHang", e.target.value)}
-                          placeholder="Nhập họ và tên"
-                          className="mt-1 h-11"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="soDienThoai" className="text-sm font-medium text-gray-700">
-                          Số điện thoại <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="soDienThoai"
-                          type="tel"
-                          value={bookingForm.soDienThoai}
-                          onChange={(e) => handleBookingFormChange("soDienThoai", e.target.value)}
-                          placeholder="Nhập số điện thoại"
-                          className="mt-1 h-11"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                          Email
-                        </Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={bookingForm.email}
-                          onChange={(e) => handleBookingFormChange("email", e.target.value)}
-                          placeholder="Nhập email"
-                          className="mt-1 h-11"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="ngaySinh" className="text-sm font-medium text-gray-700">
-                          Ngày sinh
-                        </Label>
-                        <Input
-                          id="ngaySinh"
-                          type="date"
-                          value={bookingForm.ngaySinh}
-                          onChange={(e) => handleBookingFormChange("ngaySinh", e.target.value)}
-                          className="mt-1 h-11"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="diaChi" className="text-sm font-medium text-gray-700">
-                          Địa chỉ
-                        </Label>
-                        <Input
-                          id="diaChi"
-                          type="text"
-                          value={bookingForm.diaChi}
-                          onChange={(e) => handleBookingFormChange("diaChi", e.target.value)}
-                          placeholder="Nhập địa chỉ"
-                          className="mt-1 h-11"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                {/* Login Prompt for Guest Users */}
 
+                <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
-                      <Calendar className="h-5 w-5" />
-                      Thông tin đặt phòng
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="checkIn" className="text-sm font-medium text-gray-700">
-                          Ngày nhận phòng <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="checkIn"
-                          type="date"
-                          value={bookingForm.checkIn}
-                          onChange={(e) => handleBookingFormChange("checkIn", e.target.value)}
-                          min={getTomorrowDate()}
-                          className="mt-1 h-11"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="checkOut" className="text-sm font-medium text-gray-700">
-                          Ngày trả phòng <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="checkOut"
-                          type="date"
-                          value={bookingForm.checkOut}
-                          onChange={(e) => handleBookingFormChange("checkOut", e.target.value)}
-                          min={bookingForm.checkIn || getDayAfterTomorrowDate()}
-                          className="mt-1 h-11"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
-                      <CreditCard className="h-5 w-5" />
-                      Phương thức thanh toán
-                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Thông tin khách hàng</h3>
                     <div>
-                      <Label htmlFor="phuongThucThanhToan" className="text-sm font-medium text-gray-700">
-                        Chọn phương thức thanh toán <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
+                      <Label htmlFor="tenKhachHang">Họ và tên *</Label>
+                      <Input
+                        id="tenKhachHang"
+                        value={bookingForm.tenKhachHang}
+                        onChange={(e) => handleBookingFormChange("tenKhachHang", e.target.value)}
+                        placeholder="Nhập họ và tên"
+                        className="mt-1"
+                        required
+                        disabled={!!customerData?.tenKhachHang} // Disable if pre-filled from API
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="soDienThoai">Số điện thoại *</Label>
+                      <Input
+                        id="soDienThoai"
+                        value={bookingForm.soDienThoai}
+                        onChange={(e) => handleBookingFormChange("soDienThoai", e.target.value)}
+                        placeholder="Nhập số điện thoại"
+                        className="mt-1"
+                        required
+                        disabled={!!customerData?.soDienThoai} // Disable if pre-filled from API
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={bookingForm.email}
+                        onChange={(e) => handleBookingFormChange("email", e.target.value)}
+                        placeholder="Nhập email"
+                        className="mt-1"
+                        disabled={!!customerData?.maUser} // Disable if pre-filled from API
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Thông tin đặt phòng</h3>
+                    <div>
+                      <Label htmlFor="checkIn">Ngày nhận phòng *</Label>
+                      <Input
+                        id="checkIn"
+                        type="date"
+                        value={bookingForm.checkIn}
+                        onChange={(e) => handleBookingFormChange("checkIn", e.target.value)}
+                        min={getTomorrowDate()}
+                        className="mt-1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="checkOut">Ngày trả phòng *</Label>
+                      <Input
+                        id="checkOut"
+                        type="date"
+                        value={bookingForm.checkOut}
+                        onChange={(e) => handleBookingFormChange("checkOut", e.target.value)}
+                        min={bookingForm.checkIn || getTomorrowDate()}
+                        className="mt-1"
+                        required
+                      />
+                    </div>
+                    {/* <div>
+                      <Label htmlFor="ghiChu">Ghi chú</Label>
+                      <Input
+                        id="ghiChu"
+                        value={bookingForm.ghiChu}
+                        onChange={(e) => handleBookingFormChange("ghiChu", e.target.value)}
+                        placeholder="Yêu cầu đặc biệt (tùy chọn)"
+                        className="mt-1"
+                      />
+                    </div> */}
+                  </div>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="2" className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-800">Chọn dịch vụ bổ sung</h3>
+                <div className="grid gap-4">
+                  {services.map((service) => (
+                    <div
+                      key={service.maDV}
+                      className="border border-gray-200 rounded-xl p-4 hover:border-emerald-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Image
+                          src={
+                            service.anhDV ? `/img/services/${service.anhDV}` : "/placeholder.svg?height=60&width=60"
+                          }
+                          alt={service.tenDV}
+                          width={60}
+                          height={60}
+                          className="rounded-lg object-cover"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-800">{service.tenDV}</h4>
+                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{service.moTaDV}</p>
+                          <p className="text-lg font-bold text-emerald-600">{formatPrice(service.giaDV)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV) ? (
+                            <div className="flex items-center gap-2 bg-emerald-50 rounded-lg p-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const currentService = bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV)
+                                  if (currentService) {
+                                    updateServiceQuantity(service.maDV, currentService.soLuong - 1)
+                                  }
+                                }}
+                                className="w-8 h-8 p-0"
+                              >
+                                -
+                              </Button>
+                              <span className="font-semibold min-w-[30px] text-center">
+                                {bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV)?.soLuong || 0}
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const currentService = bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV)
+                                  if (currentService) {
+                                    updateServiceQuantity(service.maDV, currentService.soLuong + 1)
+                                  }
+                                }}
+                                className="w-8 h-8 p-0"
+                              >
+                                +
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              onClick={() => addService(service)}
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              Thêm
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="3" className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Thông tin đặt phòng</h3>
+                    <div className="bg-gray-50 p-4 rounded-xl space-y-2">
+                      <div className="flex justify-between">
+                        <span>Khách hàng:</span>
+                        <span className="font-medium">{bookingForm.tenKhachHang}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Số điện thoại:</span>
+                        <span className="font-medium">{bookingForm.soDienThoai}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Check-in:</span>
+                        <span className="font-medium">{bookingForm.checkIn}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Check-out:</span>
+                        <span className="font-medium">{bookingForm.checkOut}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="phuongThucThanhToan">Phương thức thanh toán *</Label>
+                      <RadioGroup
                         value={bookingForm.phuongThucThanhToan}
                         onValueChange={(value) => handleBookingFormChange("phuongThucThanhToan", value)}
+                        className="mt-2"
                       >
-                        <SelectTrigger className="mt-1 h-11">
-                          <SelectValue placeholder="Chọn phương thức thanh toán" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="TienMat">
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                          <RadioGroupItem value="TienMat" id="cash" />
+                          <Label htmlFor="cash" className="flex-1 cursor-pointer">
                             <div className="flex items-center gap-2">
                               <span>💵</span>
                               <div>
@@ -902,8 +1050,11 @@ export default function RoomsPage() {
                                 <div className="text-xs text-gray-500">Thanh toán khi nhận phòng</div>
                               </div>
                             </div>
-                          </SelectItem>
-                          <SelectItem value="ChuyenKhoan">
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                          <RadioGroupItem value="ChuyenKhoan" id="transfer" />
+                          <Label htmlFor="transfer" className="flex-1 cursor-pointer">
                             <div className="flex items-center gap-2">
                               <span>🏦</span>
                               <div>
@@ -911,230 +1062,100 @@ export default function RoomsPage() {
                                 <div className="text-xs text-gray-500">Thanh toán online</div>
                               </div>
                             </div>
-                          </SelectItem>
-                          <SelectItem value="TheATM">
-                            <div className="flex items-center gap-2">
-                              <span>💳</span>
-                              <div>
-                                <div className="font-medium">Thẻ ATM/Visa</div>
-                                <div className="text-xs text-gray-500">Thanh toán bằng thẻ</div>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-5">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 border-b pb-2">
-                      <Sparkles className="h-5 w-5" />
-                      Dịch vụ bổ sung
-                    </h3>
-
-                    <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-2xl p-4 bg-gray-50">
+                    <h3 className="text-lg font-semibold text-gray-800">Chi tiết thanh toán</h3>
+                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
                       <div className="space-y-3">
-                        {services.map((service) => (
-                          <div
-                            key={service.maDV}
-                            className="bg-white border border-gray-200 rounded-xl p-4 hover:border-sky-300 hover:shadow-md transition-all duration-200"
-                          >
-                            <div className="flex items-start gap-4">
-                              <Image
-                                src={`/img/services/${service.anhDV}`}
-                                alt={service.tenDV}
-                                width={60}
-                                height={60}
-                                className="rounded-lg object-cover flex-shrink-0"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-800 text-base mb-2">{service.tenDV}</h4>
-                                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{service.moTaDV}</p>
-                                <p className="text-lg font-bold text-sky-600">{formatPrice(service.giaDV)}</p>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                {bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV) ? (
-                                  <div className="flex items-center gap-2 bg-sky-50 rounded-xl p-2">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        const currentService = bookingForm.dichVuDat.find(
-                                          (s) => s.maDichVu === service.maDV,
-                                        )
-                                        if (currentService) {
-                                          updateServiceQuantity(service.maDV, currentService.soLuong - 1)
-                                        }
-                                      }}
-                                      className="w-8 h-8 p-0 rounded-lg border-sky-200 hover:bg-sky-100"
-                                    >
-                                      -
-                                    </Button>
-                                    <span className="text-base font-semibold min-w-[30px] text-center text-sky-700">
-                                      {bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV)?.soLuong || 0}
-                                    </span>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        const currentService = bookingForm.dichVuDat.find(
-                                          (s) => s.maDichVu === service.maDV,
-                                        )
-                                        if (currentService) {
-                                          updateServiceQuantity(service.maDV, currentService.soLuong + 1)
-                                        }
-                                      }}
-                                      className="w-8 h-8 p-0 rounded-lg border-sky-200 hover:bg-sky-100"
-                                    >
-                                      +
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={() => addService(service)}
-                                    className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg font-medium"
-                                  >
-                                    Thêm dịch vụ
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-5">
-                  {bookingForm.dichVuDat.length > 0 && (
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-2xl border border-purple-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-bold text-purple-800 text-lg flex items-center gap-2">
-                          <Sparkles className="h-5 w-5" />
-                          Dịch vụ đã chọn ({bookingForm.dichVuDat.length})
-                        </h4>
-                        <span className="text-lg font-bold text-purple-800 bg-white px-3 py-2 rounded-lg">
-                          {formatPrice(bookingForm.dichVuDat.reduce((total, service) => total + service.thanhTien, 0))}
-                        </span>
-                      </div>
-                      <div className="space-y-3">
-                        {bookingForm.dichVuDat.map((service) => (
-                          <div
-                            key={service.maDichVu}
-                            className="flex justify-between items-center bg-white/70 rounded-xl px-4 py-3 border border-purple-100"
-                          >
-                            <div className="flex-1">
-                              <span className="text-purple-800 font-medium text-base block">{service.tenDichVu}</span>
-                              <span className="text-purple-600 text-sm">
-                                {formatPrice(service.giaDV)} x {service.soLuong}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="font-bold text-purple-800 text-lg">
-                                {formatPrice(service.thanhTien)}
-                              </span>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeService(service.maDichVu)}
-                                className="w-8 h-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {bookingForm.checkIn && bookingForm.checkOut && (
-                    <div className="bg-gradient-to-r from-sky-50 to-blue-50 p-5 rounded-2xl border border-sky-200">
-                      <h3 className="text-lg font-semibold text-sky-800 mb-4">Tổng kết đặt phòng</h3>
-                      <div className="space-y-3 text-base">
-                        <div className="flex justify-between">
-                          <span>Số đêm:</span>
-                          <span className="font-medium">
-                            {Math.ceil(
-                              (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
-                              (1000 * 60 * 60 * 24),
-                            )}{" "}
-                            đêm
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Giá phòng/đêm:</span>
-                          <span className="font-medium">{selectedRoom && formatPrice(selectedRoom.gia)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Tổng tiền phòng:</span>
-                          <span className="font-medium">
-                            {selectedRoom &&
-                              formatPrice(
-                                Math.ceil(
+                        {bookingForm.checkIn && bookingForm.checkOut && (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Số đêm:</span>
+                              <span className="font-medium">
+                                {Math.ceil(
                                   (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
                                   (1000 * 60 * 60 * 24),
-                                ) * selectedRoom.gia,
-                              )}
-                          </span>
-                        </div>
+                                )}{" "}
+                                đêm
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Giá phòng:</span>
+                              <span className="font-medium">
+                                {selectedRoom &&
+                                  formatPrice(
+                                    Math.ceil(
+                                      (new Date(bookingForm.checkOut).getTime() -
+                                        new Date(bookingForm.checkIn).getTime()) /
+                                      (1000 * 60 * 60 * 24),
+                                    ) * selectedRoom.gia,
+                                  )}
+                              </span>
+                            </div>
+                          </>
+                        )}
                         {bookingForm.dichVuDat.length > 0 && (
-                          <div className="flex justify-between font-medium text-purple-700">
-                            <span>Dịch vụ bổ sung:</span>
-                            <span>
+                          <div className="flex justify-between">
+                            <span>Dịch vụ:</span>
+                            <span className="font-medium">
                               {formatPrice(
-                                bookingForm.dichVuDat.reduce((total, service) => total + service.thanhTien, 0),
+                                bookingForm.dichVuDat.reduce(
+                                  (total, service) => total + Number(service.thanhTien),
+                                  0
+                                )
                               )}
                             </span>
                           </div>
                         )}
-                        <div className="border-t border-sky-200 pt-3 flex justify-between text-xl font-bold text-sky-700">
-                          <span>Tổng tiền:</span>
+                        <Separator />
+                        <div className="flex justify-between text-lg font-bold text-emerald-700">
+                          <span>Tổng cộng:</span>
                           <span>{formatPrice(calculateTotalPrice())}</span>
                         </div>
-                        {bookingForm.phuongThucThanhToan && (
-                          <div className="flex justify-between text-sm text-sky-600 bg-white/50 p-3 rounded-lg">
-                            <span>Phương thức thanh toán:</span>
-                            <span className="font-medium">
-                              {bookingForm.phuongThucThanhToan === "TienMat"
-                                ? "Tiền mặt"
-                                : bookingForm.phuongThucThanhToan === "ChuyenKhoan"
-                                  ? "Chuyển khoản"
-                                  : "Thẻ ATM/Visa"}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              <div className="flex gap-4 pt-6 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsBookingModalOpen(false)}
-                  className="flex-1 h-12 text-base"
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 h-12 text-base bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white"
-                >
-                  Xác nhận đặt phòng
-                </Button>
-              </div>
-            </form>
+                    {bookingForm.dichVuDat.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-800 mb-2">Dịch vụ đã chọn:</h4>
+                        <div className="space-y-2">
+                          {bookingForm.dichVuDat.map((service) => (
+                            <div key={service.maDichVu} className="flex justify-between text-sm bg-white p-2 rounded">
+                              <span>
+                                {service.tenDichVu} x{service.soLuong}
+                              </span>
+                              <span className="font-medium">{formatPrice(service.thanhTien)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-between pt-6 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={bookingStep > 1 ? prevStep : () => setIsBookingModalOpen(false)}
+              >
+                {bookingStep > 1 ? "Quay lại" : "Hủy"}
+              </Button>
+              <Button
+                onClick={bookingStep < 3 ? nextStep : handleSubmitBooking}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {bookingStep < 3 ? "Tiếp tục" : "Xác nhận đặt phòng"}
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </main>
