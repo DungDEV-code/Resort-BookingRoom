@@ -5,11 +5,22 @@ import { prisma } from "@/lib/prisma";
 // Lấy thông tin khách hàng theo email (maUser)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { email: string } }
+  context: { params: Promise<{ email?: string }> }
 ) {
   try {
-    const email = decodeURIComponent(params.email);
+    // Await the params Promise to get the actual parameters
+    const params = await context.params;
+    const rawEmail = params.email;
 
+    // Kiểm tra xem email có tồn tại không
+    if (!rawEmail) {
+      return NextResponse.json({ error: "Thiếu email" }, { status: 400 });
+    }
+
+    // Giải mã email
+    const email = decodeURIComponent(rawEmail);
+
+    // Truy vấn cơ sở dữ liệu
     const khachHang = await prisma.khachhang.findFirst({
       where: { maUser: email },
       select: {
@@ -32,13 +43,18 @@ export async function GET(
       },
     });
 
+    // Kiểm tra xem khách hàng có tồn tại không
     if (!khachHang) {
-      return NextResponse.json({ error: "Không tìm thấy khách hàng" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Không tìm thấy khách hàng" },
+        { status: 404 }
+      );
     }
 
+    // Trả về dữ liệu khách hàng
     return NextResponse.json(khachHang, { status: 200 });
   } catch (error) {
-    console.error("GET /api/khachhang/:email error:", error);
+    console.error("GET /api/khachhang/[email] lỗi:", error);
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });
   }
 }

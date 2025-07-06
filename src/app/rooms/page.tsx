@@ -1,8 +1,9 @@
-
 "use client"
 import type React from "react"
 import { useEffect, useState, useMemo } from "react"
 import Image from "next/image"
+import { useRouter, useSearchParams } from "next/navigation";
+
 import {
   Search,
   Users,
@@ -27,7 +28,6 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Header from "@/components/Header/Header"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -92,19 +92,58 @@ interface BookingForm {
   phuongThucThanhToan: string
   dichVuDat: BookedService[]
 }
+
 interface Customer {
   tenKhachHang: string
   soDienThoai: string
   maUser: string // Used as email
 }
+
 export default function RoomsPage() {
   const { user } = useAuth()
+  const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
   const [bookingStep, setBookingStep] = useState(1)
+  const searchParams = useSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false); //
+  useEffect(() => {
+    const maPhong = searchParams.get("maPhong");
+    if (maPhong) {
+      const room = rooms.find((r) => r.maPhong === maPhong);
+      if (room) {
+        setSelectedRoom(room);
+        setIsBookingModalOpen(true);
+        setBookingStep(1);
+      } else {
+        fetch(`/api/rooms/${maPhong}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.data) {
+              const enhancedRoom = {
+                ...data.data,
+                rating: data.data.rating || Number((Math.random() * 2 + 3).toFixed(1)),
+                tienNghi: data.data.tienNghi || generateRandomAmenities(),
+              };
+              setSelectedRoom(enhancedRoom);
+              setIsBookingModalOpen(true);
+              setBookingStep(1);
+            }
+          })
+          .catch((err) => {
+            console.error("Lỗi khi lấy thông tin phòng:", err);
+            toast("Không tìm thấy phòng!");
+          });
+      }
+    } else {
+      setIsBookingModalOpen(false);
+      setSelectedRoom(null);
+    }
+  }, [searchParams, rooms]);
+
   const [bookingForm, setBookingForm] = useState<BookingForm>({
     tenKhachHang: "",
     ngaySinh: "",
@@ -135,10 +174,10 @@ export default function RoomsPage() {
   ]
 
   const generateRandomAmenities = () => {
-    const shuffled = [...availableAmenities].sort(() => 0.5 - Math.random())
-    const numAmenities = Math.floor(Math.random() * 3) + 2
-    return shuffled.slice(0, numAmenities).map((amenity) => amenity.id)
-  }
+    const shuffled = [...availableAmenities].sort(() => 0.5 - Math.random());
+    const numAmenities = Math.random() < 0.5 ? 2 : 3;
+    return shuffled.slice(0, numAmenities).map((amenity) => amenity.id);
+  };
 
   useEffect(() => {
     fetch("/api/rooms")
@@ -178,7 +217,7 @@ export default function RoomsPage() {
         setServices([])
       })
   }, [])
-  // Fetch customer data when user is logged in
+
   const [customerData, setCustomerData] = useState<Customer | null>(null)
   useEffect(() => {
     if (user?.email) {
@@ -279,6 +318,7 @@ export default function RoomsPage() {
   const handleFilterChange = (key: keyof FilterState, value: string | string[]) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
+
   const nextStep = () => {
     if (bookingStep < 3) setBookingStep(bookingStep + 1)
   }
@@ -286,6 +326,7 @@ export default function RoomsPage() {
   const prevStep = () => {
     if (bookingStep > 1) setBookingStep(bookingStep - 1)
   }
+
   const handleAmenityChange = (amenityId: string, checked: boolean) => {
     setFilters((prev) => ({
       ...prev,
@@ -321,10 +362,10 @@ export default function RoomsPage() {
   }
 
   const handleBookNow = (room: Room) => {
-    setSelectedRoom(room)
-    setBookingStep(1)
-    setIsBookingModalOpen(true)
-  }
+    setSelectedRoom(room);
+    setBookingStep(1);
+    router.push(`/rooms?maPhong=${room.maPhong}`);
+  };
 
   const calculateTotalPrice = () => {
     if (!selectedRoom || !bookingForm.checkIn || !bookingForm.checkOut) return 0;
@@ -380,65 +421,122 @@ export default function RoomsPage() {
     const updatedServices = bookingForm.dichVuDat.filter((s) => s.maDichVu !== serviceId)
     setBookingForm((prev) => ({ ...prev, dichVuDat: updatedServices }))
   }
-
-  const handleSubmitBooking = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!bookingForm.tenKhachHang || !bookingForm.soDienThoai || !bookingForm.checkIn || !bookingForm.checkOut) {
-      toast("Vui lòng điền đầy đủ thông tin bắt buộc!")
-      return
+  const fetchRooms = async () => {
+    try {
+      const response = await fetch("/api/rooms");
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        const enhancedData = data.data.map((room: Room) => ({
+          ...room,
+          rating: room.rating || Number((Math.random() * 2 + 3).toFixed(1)),
+          tienNghi: room.tienNghi || generateRandomAmenities(),
+        }));
+        setRooms(enhancedData);
+      } else {
+        console.error("Invalid response format or no data:", data);
+        setRooms([]);
+      }
+    } catch (err) {
+      console.error("Error fetching rooms:", err);
+      setRooms([]);
     }
+  };
 
-    const checkIn = new Date(bookingForm.checkIn)
-    const checkOut = new Date(bookingForm.checkOut)
-    if (checkOut <= checkIn) {
-      toast("Ngày trả phòng phải sau ngày nhận phòng!")
-      return
-    }
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+ const handleSubmitBooking = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    console.log("Booking data:", {
-      room: selectedRoom,
-      customer: bookingForm,
-      totalPrice: calculateTotalPrice(),
-    })
-    toast("Đặt phòng thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.")
-    setIsBookingModalOpen(false)
-    setBookingForm({
-      tenKhachHang: "",
-      ngaySinh: "",
-      diaChi: "",
-      soDienThoai: "",
-      email: "",
-      checkIn: "",
-      checkOut: "",
-      phuongThucThanhToan: "",
-      dichVuDat: [],
-    })
+  if (!bookingForm.tenKhachHang || !bookingForm.soDienThoai || !bookingForm.checkIn || !bookingForm.checkOut) {
+    toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc!");
+    setIsSubmitting(false);
+    return;
   }
 
+  const checkIn = new Date(bookingForm.checkIn);
+  const checkOut = new Date(bookingForm.checkOut);
+  if (checkOut <= checkIn) {
+    toast.warning("Ngày trả phòng phải sau ngày nhận phòng!");
+    setIsSubmitting(false);
+    return;
+  }
+
+  if (!selectedRoom) {
+    toast.warning("Không có phòng được chọn!");
+    setIsSubmitting(false);
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        maPhong: selectedRoom.maPhong,
+        tenKhachHang: bookingForm.tenKhachHang,
+        soDienThoai: bookingForm.soDienThoai,
+        email: bookingForm.email,
+        checkIn: bookingForm.checkIn,
+        checkOut: bookingForm.checkOut,
+        phuongThucThanhToan: bookingForm.phuongThucThanhToan,
+        dichVuDat: bookingForm.dichVuDat,
+        tongTien: calculateTotalPrice(),
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      if (bookingForm.phuongThucThanhToan === "ChuyenKhoan" && result.payUrl) {
+        // Redirect to MoMo payment page
+        window.location.href = result.payUrl;
+      } else {
+        // Handle cash payment success
+        toast.success("🎉 Đặt phòng thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.");
+
+        // Refetch rooms to update the room status
+        await fetchRooms();
+
+        // Reset booking form and close modal
+        setTimeout(() => {
+          setIsBookingModalOpen(false);
+          setBookingForm({
+            tenKhachHang: "",
+            ngaySinh: "",
+            diaChi: "",
+            soDienThoai: "",
+            email: "",
+            checkIn: "",
+            checkOut: "",
+            phuongThucThanhToan: "",
+            dichVuDat: [],
+          });
+          router.push("/rooms");
+        }, 500);
+      }
+    } else {
+      toast.error(`❌ Lỗi khi đặt phòng: ${result.message || "Vui lòng thử lại sau."}`);
+    }
+  } catch (error) {
+    console.error("❌ Error submitting booking:", error);
+    toast.error("Lỗi hệ thống khi đặt phòng. Vui lòng thử lại sau.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   const getTomorrowDate = () => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-
     return tomorrow.toISOString().split("T")[0]
   }
 
-  const getDayAfterTomorrowDate = () => {
-    const dayAfter = new Date()
-    dayAfter.setDate(dayAfter.getDate() + 2)
-    return dayAfter.toISOString().split("T")[0]
-  }
 
-  const truncateDescription = (text: string, wordLimit = 15) => {
-    const words = text.split(" ")
-    if (words.length <= wordLimit) return text
-    return words.slice(0, wordLimit).join(" ") + "..."
-  }
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-
       <main className="flex-1 bg-gray-50">
         <section className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 text-gray-800 py-8 md:py-16 border-b border-sky-200">
           <div className="container mx-auto px-4 text-center">
@@ -450,7 +548,6 @@ export default function RoomsPage() {
             </p>
           </div>
         </section>
-
         <section className="py-4 md:py-8">
           <div className="container mx-auto px-4">
             <div className="lg:hidden mb-4">
@@ -468,7 +565,6 @@ export default function RoomsPage() {
                 )}
               </Button>
             </div>
-
             <div className="flex gap-4 lg:gap-8">
               <aside
                 className={`
@@ -486,7 +582,6 @@ export default function RoomsPage() {
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-
                 <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-4 lg:p-6 lg:sticky lg:top-6 max-h-[calc(100vh-2rem)] overflow-y-auto">
                   <div className="mb-6">
                     <h2 className="text-base lg:text-lg font-semibold mb-3 text-gray-800">Tìm kiếm</h2>
@@ -501,7 +596,6 @@ export default function RoomsPage() {
                       />
                     </div>
                   </div>
-
                   <div className="mb-6">
                     <h3 className="text-sm font-semibold text-gray-700 mb-2">Sắp xếp theo</h3>
                     <select
@@ -514,7 +608,6 @@ export default function RoomsPage() {
                       <option value="rating-cao">Đánh giá cao nhất</option>
                     </select>
                   </div>
-
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Số khách</h3>
@@ -530,7 +623,6 @@ export default function RoomsPage() {
                         <option value="4">4+ khách</option>
                       </select>
                     </div>
-
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Loại phòng</h3>
                       <select
@@ -546,7 +638,6 @@ export default function RoomsPage() {
                         ))}
                       </select>
                     </div>
-
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Đánh giá tối thiểu</h3>
                       <select
@@ -560,7 +651,6 @@ export default function RoomsPage() {
                         <option value="4.5">4.5+ sao</option>
                       </select>
                     </div>
-
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Khoảng giá (VNĐ)</h3>
                       <div className="mb-2">
@@ -580,7 +670,6 @@ export default function RoomsPage() {
                         <span>{formatPrice(Number(filters.giaMax) || 10000000)}</span>
                       </div>
                     </div>
-
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Tiện nghi</h3>
                       <div className="space-y-2">
@@ -600,7 +689,6 @@ export default function RoomsPage() {
                       </div>
                     </div>
                   </div>
-
                   {activeFiltersCount > 0 && (
                     <div className="mt-6 pt-4 border-t">
                       <Button
@@ -614,7 +702,6 @@ export default function RoomsPage() {
                       </Button>
                     </div>
                   )}
-
                   <div className="lg:hidden mt-6 pt-4 border-t">
                     <Button
                       onClick={() => setShowFilters(false)}
@@ -625,18 +712,15 @@ export default function RoomsPage() {
                   </div>
                 </div>
               </aside>
-
               {showFilters && (
                 <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setShowFilters(false)} />
               )}
-
               <div className="flex-1 min-w-0">
                 <div className="mb-4 lg:mb-6 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
                     Tìm thấy <span className="font-semibold text-sky-600">{filteredAndSortedRooms.length}</span> phòng
                   </div>
                 </div>
-
                 {filteredAndSortedRooms.length === 0 ? (
                   <div className="text-center py-12">
                     <Search className="h-12 lg:h-16 w-12 lg:w-16 mx-auto text-gray-400 mb-4" />
@@ -669,18 +753,14 @@ export default function RoomsPage() {
                               priority={false}
                             />
                           </Link>
-
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none" />
-
                           <div className="absolute top-4 right-4 backdrop-blur-md bg-white/20 border border-white/30 text-white px-3 py-2 rounded-2xl text-xs font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300 pointer-events-none">
                             {room.maPhong}
                           </div>
-
                           <div className="absolute top-4 left-4 backdrop-blur-md bg-white/20 border border-white/30 text-white px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-2xl transform group-hover:scale-110 transition-transform duration-300 pointer-events-none">
                             <Star className="h-4 w-4 fill-yellow-300 text-yellow-300 drop-shadow-lg" />
                             {room.rating}
                           </div>
-
                           <div className="absolute bottom-4 left-4 backdrop-blur-md border border-white/30 px-3 py-2 rounded-2xl text-xs font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300 pointer-events-none">
                             <div
                               className={`${room.tinhTrang === "Còn trống" || room.tinhTrang === "Trống"
@@ -691,7 +771,6 @@ export default function RoomsPage() {
                               {room.tinhTrang}
                             </div>
                           </div>
-
                           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                             <div
                               className="absolute top-1/4 left-1/4 w-2 h-2 bg-white/40 rounded-full animate-ping"
@@ -707,7 +786,6 @@ export default function RoomsPage() {
                             />
                           </div>
                         </div>
-
                         <CardContent className="p-6 relative z-10">
                           <div className="mb-4">
                             <h3 className="font-bold text-lg text-gray-800 mb-2 line-clamp-1 group-hover:text-sky-600 transition-colors duration-300">
@@ -715,19 +793,16 @@ export default function RoomsPage() {
                             </h3>
                             <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed mb-4">{room.moTa}</p>
                           </div>
-
                           <div className="flex items-center gap-6 text-sm text-gray-500 mb-4">
                             <div className="flex items-center gap-2 bg-sky-50 px-3 py-2 rounded-xl">
                               <Users className="h-4 w-4 text-sky-600" />
                               <span className="font-medium">{room.loaiphong?.soNguoi} khách</span>
                             </div>
-
                             <div className="flex items-center gap-2 bg-indigo-50 px-3 py-2 rounded-xl">
                               <Bed className="h-4 w-4 text-indigo-600" />
                               <span className="font-medium">{room.loaiphong?.soGiuong} giường</span>
                             </div>
                           </div>
-
                           <div className="mb-6">
                             {room.tienNghi && room.tienNghi.length > 0 && (
                               <div className="flex flex-wrap gap-2">
@@ -755,7 +830,6 @@ export default function RoomsPage() {
                               </div>
                             )}
                           </div>
-
                           <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                             <div>
                               <div className="text-2xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
@@ -763,7 +837,6 @@ export default function RoomsPage() {
                               </div>
                               <div className="text-xs text-gray-500 font-medium">/ đêm</div>
                             </div>
-
                             <Button
                               size="lg"
                               disabled={room.tinhTrang !== "Trống" && room.tinhTrang !== "Còn trống"}
@@ -788,8 +861,15 @@ export default function RoomsPage() {
             </div>
           </div>
         </section>
-
-        <Dialog open={isBookingModalOpen} onOpenChange={setIsBookingModalOpen}>
+        <Dialog
+          open={isBookingModalOpen}
+          onOpenChange={(open) => {
+            setIsBookingModalOpen(open);
+            if (!open) {
+              router.push("/rooms");
+            }
+          }}
+        >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-emerald-700 flex items-center gap-2">
@@ -797,26 +877,6 @@ export default function RoomsPage() {
                 Đặt phòng - {selectedRoom?.tenPhong}
               </DialogTitle>
             </DialogHeader>
-
-            {/* Progress Steps */}
-            <div className="flex items-center justify-center mb-6">
-              <div className="flex items-center gap-4">
-                {[1, 2, 3].map((step) => (
-                  <div key={step} className="flex items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${step <= bookingStep ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500"
-                        }`}
-                    >
-                      {step < bookingStep ? <Check className="h-5 w-5" /> : step}
-                    </div>
-                    {step < 3 && (
-                      <div className={`w-16 h-1 mx-2 ${step < bookingStep ? "bg-emerald-600" : "bg-gray-200"}`} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <Tabs value={bookingStep.toString()} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="1" disabled={bookingStep < 1}>
@@ -829,9 +889,7 @@ export default function RoomsPage() {
                   Xác nhận
                 </TabsTrigger>
               </TabsList>
-
               <TabsContent value="1" className="space-y-6">
-                {/* Room Info */}
                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
                   <div className="flex items-center gap-4">
                     <Image
@@ -852,9 +910,6 @@ export default function RoomsPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Login Prompt for Guest Users */}
-
                 <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Thông tin khách hàng</h3>
@@ -867,7 +922,7 @@ export default function RoomsPage() {
                         placeholder="Nhập họ và tên"
                         className="mt-1"
                         required
-                        disabled={!!customerData?.tenKhachHang} // Disable if pre-filled from API
+                        disabled={!!customerData?.tenKhachHang}
                       />
                     </div>
                     <div>
@@ -879,7 +934,6 @@ export default function RoomsPage() {
                         placeholder="Nhập số điện thoại"
                         className="mt-1"
                         required
-                        disabled={!!customerData?.soDienThoai} // Disable if pre-filled from API
                       />
                     </div>
                     <div>
@@ -891,11 +945,10 @@ export default function RoomsPage() {
                         onChange={(e) => handleBookingFormChange("email", e.target.value)}
                         placeholder="Nhập email"
                         className="mt-1"
-                        disabled={!!customerData?.maUser} // Disable if pre-filled from API
+                        disabled={!!customerData?.maUser}
                       />
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Thông tin đặt phòng</h3>
                     <div>
@@ -922,20 +975,9 @@ export default function RoomsPage() {
                         required
                       />
                     </div>
-                    {/* <div>
-                      <Label htmlFor="ghiChu">Ghi chú</Label>
-                      <Input
-                        id="ghiChu"
-                        value={bookingForm.ghiChu}
-                        onChange={(e) => handleBookingFormChange("ghiChu", e.target.value)}
-                        placeholder="Yêu cầu đặc biệt (tùy chọn)"
-                        className="mt-1"
-                      />
-                    </div> */}
                   </div>
                 </form>
               </TabsContent>
-
               <TabsContent value="2" className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800">Chọn dịch vụ bổ sung</h3>
                 <div className="grid gap-4">
@@ -1009,7 +1051,6 @@ export default function RoomsPage() {
                   ))}
                 </div>
               </TabsContent>
-
               <TabsContent value="3" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
@@ -1032,7 +1073,6 @@ export default function RoomsPage() {
                         <span className="font-medium">{bookingForm.checkOut}</span>
                       </div>
                     </div>
-
                     <div>
                       <Label htmlFor="phuongThucThanhToan">Phương thức thanh toán *</Label>
                       <RadioGroup
@@ -1067,7 +1107,6 @@ export default function RoomsPage() {
                       </RadioGroup>
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800">Chi tiết thanh toán</h3>
                     <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
@@ -1119,7 +1158,6 @@ export default function RoomsPage() {
                         </div>
                       </div>
                     </div>
-
                     {bookingForm.dichVuDat.length > 0 && (
                       <div>
                         <h4 className="font-medium text-gray-800 mb-2">Dịch vụ đã chọn:</h4>
@@ -1139,7 +1177,6 @@ export default function RoomsPage() {
                 </div>
               </TabsContent>
             </Tabs>
-
             <div className="flex justify-between pt-6 border-t">
               <Button
                 type="button"
@@ -1150,10 +1187,56 @@ export default function RoomsPage() {
               </Button>
               <Button
                 onClick={bookingStep < 3 ? nextStep : handleSubmitBooking}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className={`
+            relative overflow-hidden bg-gradient-to-r from-emerald-600 to-teal-700
+            hover:from-emerald-700 hover:to-teal-800
+            text-white font-bold px-6 py-3 rounded-xl
+            shadow-lg hover:shadow-xl transition-all duration-300
+            transform hover:scale-105 active:scale-95
+            disabled:from-gray-400 disabled:to-gray-500 disabled:hover:scale-100
+            flex items-center gap-2
+          `}
+                disabled={isSubmitting || (bookingStep === 3 && !bookingForm.phuongThucThanhToan)}
               >
-                {bookingStep < 3 ? "Tiếp tục" : "Xác nhận đặt phòng"}
-                <ArrowRight className="h-4 w-4 ml-2" />
+                <div
+                  className={`
+              absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent
+              -skew-x-12 -translate-x-full
+              ${isSubmitting ? "" : "group-hover:translate-x-full"} transition-transform duration-1000
+            `}
+                />
+                {isSubmitting ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white relative z-10"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span className="relative z-10 text-sm">Đang xử lý...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-5 w-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="relative z-10 text-sm">
+                      {bookingStep < 3 ? "Tiếp tục" : "Xác nhận"}
+                    </span>
+                  </>
+                )}
               </Button>
             </div>
           </DialogContent>

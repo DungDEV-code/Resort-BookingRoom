@@ -79,7 +79,9 @@ export default function RoomDetail() {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [comment, setComment] = useState("")
   const [rating, setRating] = useState(5)
-
+  const handleDatPhong = () => {
+    router.push(`/rooms?maPhong=${maPhong}`); // ✅ dùng đúng biến
+  }
   useEffect(() => {
     if (maPhong) {
       fetch(`/api/rooms/${maPhong}`)
@@ -175,9 +177,8 @@ export default function RoomDetail() {
                   Mã: {room.maPhong}
                 </Badge>
                 <Badge
-                  className={`text-xs ${
-                    room.tinhTrang === "Trống" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                  }`}
+                  className={`text-xs ${room.tinhTrang === "Trống" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    }`}
                 >
                   {TINH_TRANG_MAP[room.tinhTrang] || room.tinhTrang}
                 </Badge>
@@ -221,9 +222,8 @@ export default function RoomDetail() {
                     src={room.hinhAnh ? `/img/rooms/${room.hinhAnh}` : "/placeholder.svg?height=500&width=800"}
                     alt={room.tenPhong || "Phòng"}
                     fill
-                    className={`object-cover transition-all duration-500 group-hover:scale-105 ${
-                      imageLoaded ? "opacity-100" : "opacity-0"
-                    }`}
+                    className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"
+                      }`}
                     sizes="(max-width: 1024px) 100vw, 66vw"
                     priority
                     onLoad={() => setImageLoaded(true)}
@@ -353,9 +353,8 @@ export default function RoomDetail() {
                                   {[...Array(5)].map((_, i) => (
                                     <Star
                                       key={i}
-                                      className={`h-4 w-4 ${
-                                        i < comment.danhGia ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                                      }`}
+                                      className={`h-4 w-4 ${i < comment.danhGia ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                        }`}
                                     />
                                   ))}
                                 </div>
@@ -413,13 +412,19 @@ export default function RoomDetail() {
                     <Button
                       size="lg"
                       disabled={room.tinhTrang !== "Trống"}
-                      className={`w-full font-bold py-4 rounded-lg text-lg shadow-md transition-all duration-200 ${
-                        room.tinhTrang === "Trống"
+                      onClick={() => {
+                        if (room.tinhTrang === "Trống") {
+                          router.push(`/rooms?maPhong=${room.maPhong}`);
+                        }
+                      }}
+                      className={`w-full font-bold py-4 rounded-lg text-lg shadow-md transition-all duration-200 ${room.tinhTrang === "Trống"
                           ? "bg-blue-600 hover:bg-blue-700 text-white"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      }`}
+                        }`}
                     >
-                      {TINH_TRANG_MAP[room.tinhTrang] === "Còn trống" ? "Đặt phòng ngay" : "Phòng đã hết"}
+                      {TINH_TRANG_MAP[room.tinhTrang] === "Còn trống"
+                        ? "Đặt phòng ngay"
+                        : "Phòng đã hết"}
                     </Button>
 
                     {TINH_TRANG_MAP[room.tinhTrang] === "Còn trống" && (
