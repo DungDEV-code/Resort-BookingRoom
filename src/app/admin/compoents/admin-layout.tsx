@@ -1,18 +1,18 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
+import type React from "react"
 import { AdminSidebar } from "./admin-sidebar"
 import { AdminHeader } from "./admin-header"
 import { cn } from "@/lib/utils"
+import { Toaster } from "sonner"
 
 interface AdminLayoutProps {
   children: React.ReactNode
   title?: string
 }
 
-export function AdminLayout({ children, title }: AdminLayoutProps) {
+export function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -31,20 +31,20 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar cố định bên trái */}
       <AdminSidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
 
-      {/* Main content wrapper with push effect */}
-      <div className="min-h-screen">
-        {/* Header with push effect */}
-        <div className={cn("transition-all duration-300 ease-in-out", sidebarOpen ? "lg:ml-64" : "lg:ml-0")}>
-          <AdminHeader onToggleSidebar={toggleSidebar} title={title} />
-        </div>
+      {/* Content wrapper */}
+      <div className={cn("flex flex-col flex-1", sidebarOpen ? "lg:ml-64" : "lg:ml-0")}>
+        {/* Sticky Header */}
+        <AdminHeader onToggleSidebar={toggleSidebar} />
 
-        {/* Main content with push effect */}
-        <div className={cn("transition-all duration-300 ease-in-out", sidebarOpen ? "lg:ml-64" : "lg:ml-0")}>
-          <main className="p-4 sm:p-6">{children}</main>
-        </div>
+        {/* Scrollable main content */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <Toaster richColors position="top-center" />
+          {children}
+        </main>
       </div>
     </div>
   )

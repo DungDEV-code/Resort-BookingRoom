@@ -1,6 +1,13 @@
 "use client"
 
-import { Menu, Bell, ChevronDown, Settings, User, LogOut } from "lucide-react"
+import {
+  Menu,
+  Bell,
+  ChevronDown,
+  Settings,
+  User,
+  LogOut,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -11,13 +18,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { usePathname } from "next/navigation"
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void
   title?: string
 }
 
-export function AdminHeader({ onToggleSidebar, title = "Dashboard" }: AdminHeaderProps) {
+const titleMap: Record<string, string> = {
+  "/admin": "Dashboard",
+  "/admin/employees": "Quản lý nhân viên",
+  "/admin/schedules": "Quản lý lịch làm",
+  "/admin/rooms": "Quản lý phòng",
+  "/admin/services": "Quản lý dịch vụ",
+  "/admin/room-types": "Quản lý loại phòng",
+  "/admin/bookings": "Quản lý đơn đặt phòng",
+  "/admin/promotions": "Quản lý ưu đãi",
+  "/admin/accounts": "Quản lý tài khoản",
+  "/admin/support": "Liên hệ hỗ trợ",
+}
+
+export function AdminHeader({ onToggleSidebar, title }: AdminHeaderProps) {
+  const pathname = usePathname()
+  const resolvedTitle = title || titleMap[pathname] || "Trang quản trị"
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 px-4 sm:px-6">
       <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onToggleSidebar}>
@@ -26,7 +50,7 @@ export function AdminHeader({ onToggleSidebar, title = "Dashboard" }: AdminHeade
       </Button>
 
       <div className="flex-1">
-        <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{resolvedTitle}</h1>
       </div>
 
       {/* Right side - notifications, user menu */}
@@ -40,7 +64,7 @@ export function AdminHeader({ onToggleSidebar, title = "Dashboard" }: AdminHeade
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-9 gap-2 px-3">
               <Avatar className="h-7 w-7">
-                <AvatarImage src="/placeholder.svg?height=28&width=28" alt="Admin" />
+                <AvatarImage src="/placeholder.svg" alt="Admin" />
                 <AvatarFallback className="text-xs bg-blue-600 text-white">AD</AvatarFallback>
               </Avatar>
               <div className="hidden sm:flex flex-col items-start text-xs">
@@ -54,7 +78,7 @@ export function AdminHeader({ onToggleSidebar, title = "Dashboard" }: AdminHeade
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
+                  <AvatarImage src="/placeholder.svg" alt="Admin" />
                   <AvatarFallback className="bg-blue-600 text-white">AD</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">

@@ -125,10 +125,7 @@ async function createBookingFromMoMo(bookingData: any, transId: string) {
 
       // 🔧 Sửa: Thêm log khi cập nhật trạng thái phòng
       console.log(`📝 Cập nhật trạng thái phòng ${maPhong} thành DaDat`)
-      await prisma.phong.update({
-        where: { maPhong },
-        data: { tinhTrang: "DaDat" },
-      })
+    
 
       // 🔧 Sửa: Thêm log khi lấy dữ liệu booking hoàn chỉnh
       console.log(`📝 Lấy dữ liệu booking hoàn chỉnh ${maDatPhong}`)

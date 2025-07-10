@@ -3,7 +3,8 @@ import type React from "react"
 import { useEffect, useState, useMemo } from "react"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation";
-
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import {
   Search,
   Users,
@@ -100,6 +101,7 @@ interface Customer {
 }
 
 export default function RoomsPage() {
+  const [bookedDates, setBookedDates] = useState<Date[]>([]);
   const { user } = useAuth()
   const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([])
@@ -112,12 +114,14 @@ export default function RoomsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false); //
   useEffect(() => {
     const maPhong = searchParams.get("maPhong");
+    console.log("Selected maPhong:", maPhong);
     if (maPhong) {
       const room = rooms.find((r) => r.maPhong === maPhong);
       if (room) {
         setSelectedRoom(room);
         setIsBookingModalOpen(true);
         setBookingStep(1);
+        fetchBookedDates(room.maPhong);
       } else {
         fetch(`/api/rooms/${maPhong}`)
           .then((res) => res.json())
@@ -131,6 +135,7 @@ export default function RoomsPage() {
               setSelectedRoom(enhancedRoom);
               setIsBookingModalOpen(true);
               setBookingStep(1);
+              fetchBookedDates(maPhong);
             }
           })
           .catch((err) => {
@@ -141,9 +146,66 @@ export default function RoomsPage() {
     } else {
       setIsBookingModalOpen(false);
       setSelectedRoom(null);
+      setBookedDates([]);
     }
   }, [searchParams, rooms]);
+  function addDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+  const fetchBookedDates = async (maPhong: string) => {
+    try {
+      const response = await fetch(`/api/rooms/${maPhong}/book-dates`);
+      const data = await response.json();
 
+      if (response.ok && data.success && Array.isArray(data.data)) {
+        const actualBlockedDates: Date[] = [];
+
+        // Tạo danh sách khoảng ngày đã đặt
+        const bookedRanges: { start: Date; end: Date }[] = data.data.map(
+          (booking: { check_in: string; check_out: string }) => ({
+            start: new Date(booking.check_in),
+            end: new Date(booking.check_out),
+          })
+        );
+
+        // Tạo danh sách các ngày bị block (bao gồm cả cận biên)
+        const extendedBlockedDates: Set<string> = new Set();
+
+        bookedRanges.forEach(({ start, end }) => {
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            extendedBlockedDates.add(new Date(d).toDateString());
+          }
+        });
+
+        // Ẩn thêm cả các ngày trước vùng bị block nếu check-out của người dùng rơi vào vùng block
+        bookedRanges.forEach(({ start }) => {
+          const dayBefore = new Date(start);
+          dayBefore.setDate(dayBefore.getDate() - 1);
+          extendedBlockedDates.add(dayBefore.toDateString()); // 👈 Thêm ngày 12 nếu block bắt đầu từ 13
+        });
+
+        // Chuyển Set về mảng Date[]
+        const result = Array.from(extendedBlockedDates).map((d) => new Date(d));
+        setBookedDates(result);
+      } else {
+        console.error("Invalid booked dates response:", data);
+        setBookedDates([]);
+        toast.error("Không thể tải danh sách ngày đã đặt!");
+      }
+    } catch (err) {
+      console.error("Error fetching booked dates:", err);
+      setBookedDates([]);
+      toast.error("Lỗi hệ thống khi tải ngày đã đặt!");
+    }
+  };
+  function formatDateToYYYYMMDDLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, "0");
+    const day = `${date.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
   const [bookingForm, setBookingForm] = useState<BookingForm>({
     tenKhachHang: "",
     ngaySinh: "",
@@ -311,7 +373,10 @@ export default function RoomsPage() {
 
     return filtered
   }, [rooms, searchTerm, filters])
-
+  function parseLocalDate(dateStr: string): Date {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day); // month: 0-indexed
+  }
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price)
 
@@ -361,11 +426,19 @@ export default function RoomsPage() {
     setBookingForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleBookNow = (room: Room) => {
-    setSelectedRoom(room);
-    setBookingStep(1);
-    router.push(`/rooms?maPhong=${room.maPhong}`);
-  };
+ const handleBookNow = (room: Room) => {
+  if (!user) {
+    // If user is not logged in, redirect to login page
+    toast.warning("Vui lòng đăng nhập để đặt phòng!");
+    router.push("/auth"); // Adjust the path to your login page
+    return;
+  }
+
+  // If user is logged in, proceed with booking
+  setSelectedRoom(room);
+  setBookingStep(1);
+  router.push(`/rooms?maPhong=${room.maPhong}`);
+};
 
   const calculateTotalPrice = () => {
     if (!selectedRoom || !bookingForm.checkIn || !bookingForm.checkOut) return 0;
@@ -445,87 +518,87 @@ export default function RoomsPage() {
   useEffect(() => {
     fetchRooms();
   }, []);
- const handleSubmitBooking = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsSubmitting(true);
+  const handleSubmitBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  if (!bookingForm.tenKhachHang || !bookingForm.soDienThoai || !bookingForm.checkIn || !bookingForm.checkOut) {
-    toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc!");
-    setIsSubmitting(false);
-    return;
-  }
-
-  const checkIn = new Date(bookingForm.checkIn);
-  const checkOut = new Date(bookingForm.checkOut);
-  if (checkOut <= checkIn) {
-    toast.warning("Ngày trả phòng phải sau ngày nhận phòng!");
-    setIsSubmitting(false);
-    return;
-  }
-
-  if (!selectedRoom) {
-    toast.warning("Không có phòng được chọn!");
-    setIsSubmitting(false);
-    return;
-  }
-
-  try {
-    const response = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        maPhong: selectedRoom.maPhong,
-        tenKhachHang: bookingForm.tenKhachHang,
-        soDienThoai: bookingForm.soDienThoai,
-        email: bookingForm.email,
-        checkIn: bookingForm.checkIn,
-        checkOut: bookingForm.checkOut,
-        phuongThucThanhToan: bookingForm.phuongThucThanhToan,
-        dichVuDat: bookingForm.dichVuDat,
-        tongTien: calculateTotalPrice(),
-      }),
-    });
-
-    const result = await response.json();
-
-    if (response.ok && result.success) {
-      if (bookingForm.phuongThucThanhToan === "ChuyenKhoan" && result.payUrl) {
-        // Redirect to MoMo payment page
-        window.location.href = result.payUrl;
-      } else {
-        // Handle cash payment success
-        toast.success("🎉 Đặt phòng thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.");
-
-        // Refetch rooms to update the room status
-        await fetchRooms();
-
-        // Reset booking form and close modal
-        setTimeout(() => {
-          setIsBookingModalOpen(false);
-          setBookingForm({
-            tenKhachHang: "",
-            ngaySinh: "",
-            diaChi: "",
-            soDienThoai: "",
-            email: "",
-            checkIn: "",
-            checkOut: "",
-            phuongThucThanhToan: "",
-            dichVuDat: [],
-          });
-          router.push("/rooms");
-        }, 500);
-      }
-    } else {
-      toast.error(`❌ Lỗi khi đặt phòng: ${result.message || "Vui lòng thử lại sau."}`);
+    if (!bookingForm.tenKhachHang || !bookingForm.soDienThoai || !bookingForm.checkIn || !bookingForm.checkOut) {
+      toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc!");
+      setIsSubmitting(false);
+      return;
     }
-  } catch (error) {
-    console.error("❌ Error submitting booking:", error);
-    toast.error("Lỗi hệ thống khi đặt phòng. Vui lòng thử lại sau.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+
+    const checkIn = new Date(bookingForm.checkIn);
+    const checkOut = new Date(bookingForm.checkOut);
+    if (checkOut <= checkIn) {
+      toast.warning("Ngày trả phòng phải sau ngày nhận phòng!");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!selectedRoom) {
+      toast.warning("Không có phòng được chọn!");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maPhong: selectedRoom.maPhong,
+          tenKhachHang: bookingForm.tenKhachHang,
+          soDienThoai: bookingForm.soDienThoai,
+          email: bookingForm.email,
+          checkIn: bookingForm.checkIn,
+          checkOut: bookingForm.checkOut,
+          phuongThucThanhToan: bookingForm.phuongThucThanhToan,
+          dichVuDat: bookingForm.dichVuDat,
+          tongTien: calculateTotalPrice(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        if (bookingForm.phuongThucThanhToan === "ChuyenKhoan" && result.payUrl) {
+          // Redirect to MoMo payment page
+          window.location.href = result.payUrl;
+        } else {
+          // Handle cash payment success
+          toast.success("🎉 Đặt phòng thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.");
+
+          // Refetch rooms to update the room status
+          await fetchRooms();
+
+          // Reset booking form and close modal
+          setTimeout(() => {
+            setIsBookingModalOpen(false);
+            setBookingForm({
+              tenKhachHang: "",
+              ngaySinh: "",
+              diaChi: "",
+              soDienThoai: "",
+              email: "",
+              checkIn: "",
+              checkOut: "",
+              phuongThucThanhToan: "",
+              dichVuDat: [],
+            });
+            router.push("/rooms");
+          }, 500);
+        }
+      } else {
+        toast.error(`❌ Lỗi khi đặt phòng: ${result.message || "Vui lòng thử lại sau."}`);
+      }
+    } catch (error) {
+      console.error("❌ Error submitting booking:", error);
+      toast.error("Lỗi hệ thống khi đặt phòng. Vui lòng thử lại sau.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const getTomorrowDate = () => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -951,28 +1024,72 @@ export default function RoomsPage() {
                   </div>
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Thông tin đặt phòng</h3>
+
                     <div>
                       <Label htmlFor="checkIn">Ngày nhận phòng *</Label>
-                      <Input
+                      <DatePicker
                         id="checkIn"
-                        type="date"
-                        value={bookingForm.checkIn}
-                        onChange={(e) => handleBookingFormChange("checkIn", e.target.value)}
-                        min={getTomorrowDate()}
-                        className="mt-1"
-                        required
+                        selected={bookingForm.checkIn ? parseLocalDate(bookingForm.checkIn) : null}
+                        onChange={(date: Date | null) => {
+                          if (!date) return;
+                          const isBooked = bookedDates.some(
+                            (d) => d.toDateString() === date.toDateString()
+                          );
+                          if (isBooked) {
+                            toast.warning("Ngày này đã được đặt, vui lòng chọn ngày khác!");
+                            return;
+                          }
+
+                          // ❌ Không dùng: date.toISOString().split("T")[0]
+                          // ✅ Dùng local format
+                          const formatted = formatDateToYYYYMMDDLocal(date);
+                          handleBookingFormChange("checkIn", formatted);
+                        }}
+                        excludeDates={bookedDates}
+                        minDate={new Date(Date.now() + 86400000)}
+                        dateFormat="yyyy-MM-dd"
+                        className="mt-1 w-full border px-3 py-2 rounded"
+                        placeholderText="Chọn ngày nhận phòng"
                       />
+
                     </div>
+
                     <div>
                       <Label htmlFor="checkOut">Ngày trả phòng *</Label>
-                      <Input
+                      <DatePicker
                         id="checkOut"
-                        type="date"
-                        value={bookingForm.checkOut}
-                        onChange={(e) => handleBookingFormChange("checkOut", e.target.value)}
-                        min={bookingForm.checkIn || getTomorrowDate()}
-                        className="mt-1"
-                        required
+                        selected={bookingForm.checkOut ? parseLocalDate(bookingForm.checkOut) : null}
+                        onChange={(date: Date | null) => {
+                          if (!date) return;
+
+                          const checkInDate = bookingForm.checkIn ? parseLocalDate(bookingForm.checkIn) : null;
+
+                          // ❌ Nếu chọn checkOut <= checkIn → cảnh báo
+                          if (checkInDate && date <= checkInDate) {
+                            toast.warning("Ngày trả phòng phải sau ngày nhận phòng!");
+                            return;
+                          }
+
+                          const isBooked = bookedDates.some(
+                            (d) => d.toDateString() === date.toDateString()
+                          );
+                          if (isBooked) {
+                            toast.warning("Ngày này đã được đặt, vui lòng chọn ngày khác!");
+                            return;
+                          }
+
+                          const formatted = formatDateToYYYYMMDDLocal(date);
+                          handleBookingFormChange("checkOut", formatted);
+                        }}
+                        excludeDates={bookedDates}
+                        minDate={
+                          bookingForm.checkIn
+                            ? addDays(parseLocalDate(bookingForm.checkIn), 1) // 👈 ít nhất là 1 ngày sau check-in
+                            : new Date(Date.now() + 86400000)
+                        }
+                        dateFormat="yyyy-MM-dd"
+                        className="mt-1 w-full border px-3 py-2 rounded"
+                        placeholderText="Chọn ngày trả phòng"
                       />
                     </div>
                   </div>

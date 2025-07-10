@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
       const orderId = maDatPhong;
       const orderInfo = `Thanh toán đặt phòng ${maDatPhong}`;
       const redirectUrl = "http://localhost:3000/rooms";
-      const ipnUrl = "https://01dc-112-197-14-130.ngrok-free.app/api/momo-callback";
+      const ipnUrl = "https://e3c690526ad6.ngrok-free.app/api/momo-callback";
       const amount = tongTienHoaDon.toString();
       const requestType = "payWithATM";
 
@@ -299,14 +299,20 @@ export async function POST(req: NextRequest) {
         soDienThoai,
       };
 
-      const extraData = Buffer.from(JSON.stringify(bookingData)).toString("base64");
 
+      const extraData = Buffer.from(JSON.stringify(bookingData)).toString("base64");
+      console.log("📋 Base64-encoded extraData:", extraData);
+
+      // Sửa đổi: Tạo rawSignature với extraData đã mã hóa base64
       const rawSignature =
         `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}` +
         `&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}` +
         `&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
 
       const signature = crypto.createHmac("sha256", secretKey).update(rawSignature).digest("hex");
+
+      console.log("🔐 Raw signature:", rawSignature);
+      console.log("🔐 Signature:", signature);
 
       const requestBody = {
         partnerCode,
@@ -406,11 +412,6 @@ export async function POST(req: NextRequest) {
             ngayTaoHD: new Date(),
             trangThaiHD: "ChuaThanhToan",
           },
-        });
-
-        await prisma.phong.update({
-          where: { maPhong },
-          data: { tinhTrang: "DaDat" },
         });
 
         return await prisma.datphong.findUnique({
