@@ -11,9 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+
 import { useAuth } from "@/context/auth-context";
 import { signIn, useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 export default function AuthPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -93,16 +94,32 @@ export default function AuthPage() {
                 body: JSON.stringify({ emailOrUsername, password }),
             });
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || "Lỗi đăng nhập");
+            const contentType = res.headers.get("content-type");
+            let data: any = {};
+
+            if (contentType?.includes("application/json")) {
+                data = await res.json();
+            } else {
+                throw new Error("Phản hồi không hợp lệ từ server.");
+            }
+
+            if (!res.ok) {
+                throw new Error(data.message || "Đăng nhập thất bại.");
+            }
 
             toast.success("✅ " + data.message);
             router.push("/");
-        } catch (err: any) {
-            toast.error("❌ " + err.message);
+        } catch (err) {
+            const errorMessage =
+                err instanceof Error
+                    ? err.message
+                    : typeof err === "string"
+                        ? err
+                        : "Lỗi không xác định";
+
+            toast.error("❌ " + errorMessage);
         }
     };
-
     const handleGoogleSignIn = () => {
         console.log("Attempting Google Sign-In");
         signIn("google", { callbackUrl: "/" });

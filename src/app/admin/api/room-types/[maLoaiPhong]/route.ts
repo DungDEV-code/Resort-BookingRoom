@@ -3,31 +3,34 @@ import { NextRequest, NextResponse } from "next/server"
 import fs from "fs/promises"
 import path from "path"
 // PUT: Cập nhật loại phòng
-export async function PUT(req: NextRequest, { params }: { params: { maLoaiPhong: string } }) {
+export async function PUT(
+  req: NextRequest,
+  context: { params: { maLoaiPhong: string } }
+) {
   try {
-    const { maLoaiPhong } = params;
+    const { params } = context
+    const maLoaiPhong = params.maLoaiPhong
 
-    const form = await req.formData();
-    const tenLoaiPhong = form.get("tenLoaiPhong")?.toString() || "";
-    const moTa = form.get("moTa")?.toString() || "";
-    const soNguoi = Number(form.get("soNguoi"));
-    const soGiuong = Number(form.get("soGiuong"));
-    const gia_min = Number(form.get("gia_min"));
-    const gia_max = Number(form.get("gia_max"));
-    const currentImage = form.get("currentImage")?.toString() || "";
+    const form = await req.formData()
+    const tenLoaiPhong = form.get("tenLoaiPhong")?.toString() || ""
+    const moTa = form.get("moTa")?.toString() || ""
+    const soNguoi = Number(form.get("soNguoi"))
+    const soGiuong = Number(form.get("soGiuong"))
+    const gia_min = Number(form.get("gia_min"))
+    const gia_max = Number(form.get("gia_max"))
 
-    const file = form.get("hinhAnh");
+    const file = form.get("hinhAnh")
+    let hinhAnh = ""
 
-    let hinhAnh = currentImage;
-
-    // Nếu có file và là object File (không phải string) và có size
     if (file instanceof File && file.size > 0) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const filename = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
-      const filepath = path.join(process.cwd(), "public", "img", filename);
-      await fs.writeFile(filepath, buffer);
-      hinhAnh = filename;
+      const bytes = await file.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+      const filename = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`
+      const filepath = path.join(process.cwd(), "public", "img", filename)
+      await fs.writeFile(filepath, buffer)
+      hinhAnh = filename
+    } else {
+      hinhAnh = form.get("hinhAnh")?.toString() || ""
     }
 
     const updated = await prisma.loaiphong.update({
@@ -41,50 +44,52 @@ export async function PUT(req: NextRequest, { params }: { params: { maLoaiPhong:
         gia_max,
         hinhAnh,
       },
-    });
+    })
 
-    return NextResponse.json(updated);
+    return NextResponse.json(updated)
   } catch (error) {
-    console.error("Lỗi cập nhật loại phòng:", error);
-    return NextResponse.json({ error: "Không cập nhật được loại phòng" }, { status: 500 });
+    console.error("Lỗi cập nhật loại phòng:", error)
+    return NextResponse.json(
+      { error: "Không cập nhật được loại phòng" },
+      { status: 500 }
+    )
   }
 }
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { maLoaiPhong: string } }
 ) {
   try {
-    const { maLoaiPhong } = params;
+    const { maLoaiPhong } = params
 
-    // Kiểm tra xem loại phòng có tồn tại không
+    // Kiểm tra loại phòng có tồn tại không
     const exists = await prisma.loaiphong.findUnique({
       where: { maLoaiPhong },
-    });
+    })
 
     if (!exists) {
-      return NextResponse.json({ error: "Loại phòng không tồn tại" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Loại phòng không tồn tại" },
+        { status: 404 }
+      )
     }
 
     // Tiến hành xoá
     await prisma.loaiphong.delete({
       where: { maLoaiPhong },
-    });
+    })
 
-    return NextResponse.json({ message: "Xoá loại phòng thành công" });
+    return NextResponse.json({ message: "Xoá loại phòng thành công" })
   } catch (error) {
-    console.error("Lỗi khi xoá loại phòng:", error);
-    return NextResponse.json({ error: "Không thể xoá loại phòng" }, { status: 500 });
+    console.error("Lỗi khi xoá loại phòng:", error)
+    return NextResponse.json(
+      { error: "Không thể xoá loại phòng" },
+      { status: 500 }
+    )
   }
 }
 
-const parseNumber = (value: FormDataEntryValue | null, fieldName: string): number => {
-  const str = String(value).trim();
-  const num = Number(str);
-  if (str === "" || isNaN(num)) {
-    throw new Error(`Trường "${fieldName}" phải là số hợp lệ`);
-  }
-  return num;
-};
 export async function updateLoaiPhong(maLoaiPhong: string, formData: FormData) {
   try {
     const res = await fetch(`/admin/api/room-types/${maLoaiPhong}`, {

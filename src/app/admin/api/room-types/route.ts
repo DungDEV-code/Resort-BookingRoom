@@ -3,17 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import fs from "fs/promises"
 import path from "path";
-// ✅ Schema validate dữ liệu loại phòng gửi từ client
-const roomTypeSchema = z.object({
-  maLoaiPhong: z.string().min(1),
-  tenLoaiPhong: z.string().min(1),
-  soNguoi: z.number().int().positive(),
-  soGiuong: z.number().int().positive(),
-  gia_min: z.number().positive(),
-  gia_max: z.number().positive(),
-  moTa: z.string().min(1, "Mô tả là bắt buộc"),
-  hinhAnh: z.string().min(1, "Hình ảnh là bắt buộc"),
-});
 
 // ✅ GET: Lấy tất cả loại phòng
 export async function GET() {

@@ -5,10 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Trash2, Users, Bed, DollarSign, Home, Plus, Image as ImageIcon, CheckCircle, XCircle } from "lucide-react"
-import { RoomTypeDialog } from "../compoents/RoomTypeDialog"
+
 import Image from "next/image"
 import { toast } from "sonner"
+import { RoomTypeDialog } from '../compoents/RoomTypeDialog'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 
@@ -41,6 +43,43 @@ interface DataState {
   stats: Stats
 }
 
+interface DeleteConfirmDialogProps {
+  open: boolean
+  onClose: () => void
+  onConfirm: () => void
+}
+
+function DeleteConfirmDialog({ open, onClose, onConfirm }: DeleteConfirmDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogDescription>
+            Bạn có chắc chắn muốn xóa loại phòng này? Hành động này không thể hoàn tác.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            className="bg-gradient-to-r from-red-500 to-red-600 text-white"
+          >
+            Xóa
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+function formatVND(value: string | number | null | undefined): string {
+  const numberValue = typeof value === "string" ? parseFloat(value) : value
+  if (typeof numberValue !== "number" || isNaN(numberValue)) return "0 VND"
+  return `${numberValue.toLocaleString("vi-VN")} VND`
+}
 export default function RoomTypesPage() {
   const [data, setData] = useState<DataState>({
     roomTypes: [],
@@ -51,16 +90,16 @@ export default function RoomTypesPage() {
       maxPrice: 0
     }
   })
-  
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const fetchRoomTypes = async () => {
     try {
       setLoading(true)
       const res = await fetch(`${BASE_URL}/admin/api/room-types`, {
-       cache: 'no-store',
+        cache: 'no-store',
         headers: {
           'Cache-Control': 'max-age=3600'
         }
@@ -71,10 +110,10 @@ export default function RoomTypesPage() {
       const stats: Stats = {
         totalRooms: roomTypes.length,
         totalBeds: roomTypes.reduce((total: number, rt: RoomType) => total + (rt.phong?.length || 0), 0),
-        avgCapacity: roomTypes.length > 0 
+        avgCapacity: roomTypes.length > 0
           ? Math.round(roomTypes.reduce((total: number, rt: RoomType) => total + rt.soNguoi, 0) / roomTypes.length)
           : 0,
-        maxPrice: roomTypes.length > 0 
+        maxPrice: roomTypes.length > 0
           ? Math.max(...roomTypes.map((rt: RoomType) => rt.gia_max || 0))
           : 0
       }
@@ -92,43 +131,35 @@ export default function RoomTypesPage() {
     }
   }
 
-  const handleDelete = async (maLoaiPhong: string) => {
-    const confirmDelete = window.confirm("Bạn có chắc muốn xoá loại phòng này?")
-    if (!confirmDelete) return
-
-    setDeleting(maLoaiPhong)
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteId) return
+    setDeleting(confirmDeleteId)
 
     try {
-      const res = await fetch(`${BASE_URL}/admin/api/room-types/${maLoaiPhong}`, {
+      const res = await fetch(`${BASE_URL}/admin/api/room-types/${confirmDeleteId}`, {
         method: "DELETE",
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' }
       })
 
       if (!res.ok) {
         const err = await res.json()
-        throw new Error(err.error || "Không thể xoá loại phòng")
+        throw new Error(err.error || "Không thể xóa loại phòng")
       }
 
-      // Show success toast
-      toast.success("Xoá loại phòng thành công!", {
+      toast.success("Xóa loại phòng thành công!", {
         icon: <CheckCircle className="w-4 h-4 text-green-600" />,
         duration: 3000
       })
-
-      // Refresh the list by fetching fresh data
       await fetchRoomTypes()
-
     } catch (error) {
-      console.error("Lỗi khi xoá:", error)
-      toast.error("Lỗi khi xoá loại phòng", {
+      toast.error("Lỗi khi xóa loại phòng", {
         description: error instanceof Error ? error.message : "Lỗi khi kết nối tới server",
         icon: <XCircle className="w-4 h-4 text-red-600" />,
         duration: 5000
       })
     } finally {
       setDeleting(null)
+      setConfirmDeleteId(null)
     }
   }
 
@@ -214,7 +245,9 @@ export default function RoomTypesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 text-sm font-medium">Giá cao nhất</p>
-                  <p className="text-2xl font-bold">{data.stats.maxPrice.toLocaleString()}đ</p>
+                  <p className="text-2xl font-bold">
+                    {data.stats.maxPrice.toLocaleString('vi-VN')} VND
+                  </p>
                 </div>
                 <DollarSign className="w-8 h-8 text-purple-200" />
               </div>
@@ -301,10 +334,7 @@ export default function RoomTypesPage() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="text-sm font-semibold text-gray-800">
-                            {roomType.gia_min?.toLocaleString()}đ - {roomType.gia_max?.toLocaleString()}đ
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Trung bình: {Math.round((roomType.gia_min + roomType.gia_max) / 2).toLocaleString()}đ
+                            {formatVND(roomType.gia_min)} - {formatVND(roomType.gia_max)}
                           </div>
                         </div>
                       </TableCell>
@@ -330,21 +360,12 @@ export default function RoomTypesPage() {
                           </RoomTypeDialog>
                           <Button
                             size="sm"
-                            onClick={() => handleDelete(roomType.maLoaiPhong)}
+                            onClick={() => setConfirmDeleteId(roomType.maLoaiPhong)}
                             disabled={deleting === roomType.maLoaiPhong}
-                            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
                           >
-                            {deleting === roomType.maLoaiPhong ? (
-                              <>
-                                <div className="w-4 h-4 mr-1 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
-                                Đang xoá...
-                              </>
-                            ) : (
-                              <>
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Xóa
-                              </>
-                            )}
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Xóa
                           </Button>
                         </div>
                       </TableCell>
@@ -375,6 +396,12 @@ export default function RoomTypesPage() {
             </CardContent>
           </Card>
         )}
+
+        <DeleteConfirmDialog
+          open={!!confirmDeleteId}
+          onClose={() => setConfirmDeleteId(null)}
+          onConfirm={handleConfirmDelete}
+        />
       </div>
     </div>
   )

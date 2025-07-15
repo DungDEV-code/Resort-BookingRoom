@@ -96,8 +96,12 @@ export function RoomTypeDialog({ mode, roomType, children, onSuccess }: Props) {
 
     const formData = new FormData()
     Object.entries(form).forEach(([key, value]) => {
-      if (key === "hinhAnh" && value instanceof File) {
-        formData.append(key, value)
+      if (key === "hinhAnh") {
+        if (value instanceof File) {
+          formData.append("hinhAnh", value) // chọn ảnh mới
+        } else if (typeof value === "string" && mode === "edit") {
+          formData.append("hinhAnh", value) // giữ lại tên ảnh cũ khi không chọn mới
+        }
       } else {
         formData.append(key, value.toString())
       }
@@ -174,22 +178,50 @@ export function RoomTypeDialog({ mode, roomType, children, onSuccess }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Số người</Label>
-              <Input name="soNguoi" type="number" value={form.soNguoi} onChange={handleChange} required />
+              <Input
+                name="soNguoi"
+                type="number"
+                value={form.soNguoi}
+                onChange={handleChange}
+                required
+                className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
             </div>
             <div>
               <Label>Số giường</Label>
-              <Input name="soGiuong" type="number" value={form.soGiuong} onChange={handleChange} required />
+              <Input
+                name="soGiuong"
+                type="number"
+                value={form.soGiuong}
+                onChange={handleChange}
+                required
+                className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Giá tối thiểu</Label>
-              <Input name="gia_min" type="number" value={form.gia_min} onChange={handleChange} required />
+              <Input
+                name="gia_min"
+                type="number"
+                value={form.gia_min}
+                onChange={handleChange}
+                required
+                className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
             </div>
             <div>
               <Label>Giá tối đa</Label>
-              <Input name="gia_max" type="number" value={form.gia_max} onChange={handleChange} required />
+              <Input
+                name="gia_max"
+                type="number"
+                value={form.gia_max}
+                onChange={handleChange}
+                required
+                className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
             </div>
           </div>
 
