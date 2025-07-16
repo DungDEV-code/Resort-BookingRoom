@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarDays, Contact, Home, Hotel, Package, Settings, Users, Bed, BookOpen, Percent, X } from "lucide-react"
+import { CalendarDays, Contact, Home, Hotel, Package, Settings, Users, Bed, BookOpen, Percent, X, ClipboardList } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -41,6 +41,11 @@ const menuItems = [
     title: "Quản lý đơn đặt phòng",
     url: "/admin/bookings",
     icon: BookOpen,
+  },
+  {
+    title: "Quản lý dịch vụ đặt phòng",
+    url: "/admin/services-booking",
+    icon: ClipboardList,
   },
   {
     title: "Quản lý ưu đãi",

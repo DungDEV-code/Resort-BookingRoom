@@ -51,6 +51,7 @@ model dichvudatphong {
   donGiaLucDat    Decimal @db.Decimal(12, 2)
   soLuong         Int
   ThanhTien       Decimal @db.Decimal(12, 2)
+  trangThaiDV     dichvudatphong_trangThaiDV? @default(ChuaHoanThanh)
   datphong          datphong  @relation(fields: [maDatPhong], references: [maDatPhong])
   dichvu            dichvu?   @relation(fields: [maDichVu], references: [maDV])
   @@index([maDatPhong], map: "maDatPhong")
@@ -168,7 +169,10 @@ enum hoadon_trangThaiHD {
   DaThanhToan   @map("Đã Thanh Toán")
   ChoXuLy       @map("Chờ Xử Lý")
 }
-
+enum dichvudatphong_trangThaiDV {
+  ChuaHoanThanh @map("Chưa Hoàn Thành")
+  DaHoanThanh   @map("Đã Hoàn Thành")
+}
 enum phong_tinhTrang {
   Trong       @map("Trống")
   DaDat       @map("Đã Đặt")

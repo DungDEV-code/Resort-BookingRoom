@@ -13,7 +13,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Trash2, DollarSign, Package, Plus, ImageIcon, CheckCircle, XCircle, Search, Activity } from "lucide-react"
+import { Trash2, DollarSign, Package, Plus, ImageIcon, CheckCircle, XCircle, Search, Activity, Pencil } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { ServiceDialog } from "../compoents/ServicesDialog"
@@ -75,9 +75,9 @@ function DeleteConfirmDialog({ open, onClose, onConfirm }: DeleteConfirmDialogPr
 
 // Format currency to VND
 const formatVND = (amount: number | string): string => {
-  const value = typeof amount === "string" ? parseFloat(amount) : amount
-  if (isNaN(value)) return "0 VND"
-  return value.toLocaleString("vi-VN") + " VND"
+    const value = typeof amount === "string" ? parseFloat(amount) : amount
+    if (isNaN(value)) return "0 VND"
+    return value.toLocaleString("vi-VN") + " VND"
 }
 
 export default function ServicesPage() {
@@ -337,8 +337,9 @@ export default function ServicesPage() {
                                                     <ServiceDialog mode="edit" service={service}>
                                                         <Button
                                                             size="sm"
-                                                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                                            className="bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-500 hover:to-sky-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
                                                         >
+                                                            <Pencil className="w-4 h-4 mr-2" />
                                                             Sửa
                                                         </Button>
                                                     </ServiceDialog>
@@ -346,7 +347,7 @@ export default function ServicesPage() {
                                                         size="sm"
                                                         onClick={() => setConfirmDeleteId(service.maDV)}
                                                         disabled={deleting === service.maDV}
-                                                        className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
+                                                        className="bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg"
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-1" />
                                                         Xóa

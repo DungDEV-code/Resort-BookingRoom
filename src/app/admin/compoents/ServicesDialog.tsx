@@ -179,7 +179,11 @@ export function ServiceDialog({ mode, service, children, onSuccess }: Props) {
             ) : null}
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            className="w-full h-10 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            disabled={loading}
+          >
             {loading
               ? "Đang xử lý..."
               : mode === "create"

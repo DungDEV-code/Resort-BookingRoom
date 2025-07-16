@@ -378,7 +378,11 @@ export default function RoomsPage() {
     return new Date(year, month - 1, day); // month: 0-indexed
   }
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price)
+    new Intl.NumberFormat("vi-VN", {
+      style: "decimal",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price) + " VND";
 
   const handleFilterChange = (key: keyof FilterState, value: string | string[]) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -426,19 +430,19 @@ export default function RoomsPage() {
     setBookingForm((prev) => ({ ...prev, [field]: value }))
   }
 
- const handleBookNow = (room: Room) => {
-  if (!user) {
-    // If user is not logged in, redirect to login page
-    toast.warning("Vui lòng đăng nhập để đặt phòng!");
-    router.push("/auth"); // Adjust the path to your login page
-    return;
-  }
+  const handleBookNow = (room: Room) => {
+    if (!user) {
+      // If user is not logged in, redirect to login page
+      toast.warning("Vui lòng đăng nhập để đặt phòng!");
+      router.push("/auth"); // Adjust the path to your login page
+      return;
+    }
 
-  // If user is logged in, proceed with booking
-  setSelectedRoom(room);
-  setBookingStep(1);
-  router.push(`/rooms?maPhong=${room.maPhong}`);
-};
+    // If user is logged in, proceed with booking
+    setSelectedRoom(room);
+    setBookingStep(1);
+    router.push(`/rooms?maPhong=${room.maPhong}`);
+  };
 
   const calculateTotalPrice = () => {
     if (!selectedRoom || !bookingForm.checkIn || !bookingForm.checkOut) return 0;

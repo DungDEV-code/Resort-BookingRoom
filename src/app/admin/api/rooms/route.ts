@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
-import { phong_tinhTrang } from "@/generated/prisma";
+import { phong_tinhTrang, Prisma } from "@/generated/prisma";
 
 
 // Schema validation cho request body
@@ -17,9 +17,63 @@ const RoomSchema = z.object({
 });
 
 // GET: Lấy danh sách phòng
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const rooms = await prisma.phong.findMany({
+        const searchParams = request.nextUrl.searchParams;
+        const page = parseInt(searchParams.get("page") || "1");
+        const pageSize = parseInt(searchParams.get("pageSize") || "10");
+        const search = searchParams.get("search") || "";
+        const sortBy = searchParams.get("sortBy") || "maPhong";
+        const sortOrder = searchParams.get("sortOrder") || "asc";
+
+        // Validate sortBy and sortOrder
+        const validSortFields = ["maPhong", "gia"];
+        const validSortOrders: Prisma.SortOrder[] = ["asc", "desc"];
+        const sortField = validSortFields.includes(sortBy) ? sortBy : "maPhong";
+        const sortOrderValidated: Prisma.SortOrder = validSortOrders.includes(sortOrder as Prisma.SortOrder)
+            ? (sortOrder as Prisma.SortOrder)
+            : "asc";
+
+        const skip = (page - 1) * pageSize;
+
+        // Search condition
+        const where: Prisma.phongWhereInput = search
+            ? {
+                OR: [
+                    { maPhong: { contains: search } },
+                    { tenPhong: { contains: search } },
+                    {
+                        loaiphong: {
+                            is: {
+                                tenLoaiPhong: {
+                                    contains: search,
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+            : {};
+
+        // Count total results
+        const totalRooms = await prisma.phong.count({ where });
+
+        // Define correct type for returned data
+        type PhongWithRelation = Prisma.phongGetPayload<{
+            include: {
+                loaiphong: { select: { tenLoaiPhong: true } };
+                datphong: { select: { maDatPhong: true } };
+            };
+        }>;
+
+        const orderBy: Prisma.phongOrderByWithRelationInput = {
+            [sortField]: sortOrderValidated,
+        };
+
+        const rooms: PhongWithRelation[] = await prisma.phong.findMany({
+            where,
+            skip,
+            take: pageSize,
             include: {
                 loaiphong: {
                     select: {
@@ -32,11 +86,24 @@ export async function GET() {
                     },
                 },
             },
+            orderBy,
         });
 
-        return NextResponse.json(rooms, {
-            headers: { "Cache-Control": "no-store" },
-        });
+        // Map thêm số lượng đơn đặt
+        const formattedRooms = rooms.map((room) => ({
+            ...room,
+            bookingCount: room.datphong.length,
+        }));
+
+        return NextResponse.json(
+            {
+                rooms: formattedRooms,
+                totalRooms,
+            },
+            {
+                headers: { "Cache-Control": "no-store" },
+            }
+        );
     } catch (error) {
         console.error("Lỗi khi lấy danh sách phòng:", error);
         return NextResponse.json(
@@ -45,7 +112,6 @@ export async function GET() {
         );
     }
 }
-
 // POST: Thêm phòng mới
 export async function POST(req: NextRequest) {
     let filename = ""

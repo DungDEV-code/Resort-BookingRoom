@@ -106,12 +106,13 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
   }, [email, open]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    return (
+      new Intl.NumberFormat("vi-VN", {
+        style: "decimal",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount) + " VND"
+    );
   };
 
   const getPaymentStatusColor = (isPaid: boolean) => {
@@ -187,7 +188,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
   };
 
   const handleSubmitComment = async () => {
-    if (!selectedBooking || !email || rating === 0 || !comment.trim()) { 
+    if (!selectedBooking || !email || rating === 0 || !comment.trim()) {
       toast.error("Lỗi", {
         description: "Vui lòng nhập đánh giá và bình luận trước khi gửi!",
         duration: 5000,
@@ -494,7 +495,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             <div>
               <p className="text-sm text-gray-600">Tổng tiền</p>
               <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(booking.hoadon?.[0]?.tongTien || booking.tongTien || 0)}
+                {formatCurrency(booking.hoadon?.[0]?.tongTien || booking.tongTien || 0)} 
               </p>
             </div>
           </div>

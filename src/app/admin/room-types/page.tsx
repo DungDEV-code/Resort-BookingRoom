@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Trash2, Users, Bed, DollarSign, Home, Plus, Image as ImageIcon, CheckCircle, XCircle } from "lucide-react"
+import { Trash2, Users, Bed, DollarSign, Home, Plus, Image as ImageIcon, CheckCircle, XCircle, Pencil } from "lucide-react"
 
 import Image from "next/image"
 import { toast } from "sonner"
@@ -353,16 +353,18 @@ export default function RoomTypesPage() {
                           <RoomTypeDialog mode="edit" roomType={roomType}>
                             <Button
                               size="sm"
-                              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                              className="bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-500 hover:to-sky-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
                             >
+                              <Pencil className="w-4 h-4 mr-2" />
                               Sửa
                             </Button>
                           </RoomTypeDialog>
+
                           <Button
                             size="sm"
                             onClick={() => setConfirmDeleteId(roomType.maLoaiPhong)}
                             disabled={deleting === roomType.maLoaiPhong}
-                            className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
+                            className="bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg"
                           >
                             <Trash2 className="w-4 h-4 mr-1" />
                             Xóa
