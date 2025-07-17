@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
       const orderId = maDatPhong;
       const orderInfo = `Thanh toán đặt phòng ${maDatPhong}`;
       const redirectUrl = "http://localhost:3000/rooms";
-      const ipnUrl = "https://e3c690526ad6.ngrok-free.app/api/momo-callback";
+      const ipnUrl = "https://a54dcd7e9f34.ngrok-free.app/api/momo-callback";
       const amount = tongTienHoaDon.toString();
       const requestType = "payWithATM";
 

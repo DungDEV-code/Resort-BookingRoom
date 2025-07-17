@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarDays, Contact, Home, Hotel, Package, Settings, Users, Bed, BookOpen, Percent, X, ClipboardList } from "lucide-react"
+import { CalendarDays, Contact, Home, Hotel, Package, Settings, Users, Bed, BookOpen, Percent, X, ClipboardList, CreditCard, MessageSquare, MessagesSquare } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,11 @@ const menuItems = [
     icon: BookOpen,
   },
   {
+    title: "Quản lý hóa đơn",
+    url: "/admin/invoices",
+    icon: CreditCard,
+  },
+  {
     title: "Quản lý dịch vụ đặt phòng",
     url: "/admin/services-booking",
     icon: ClipboardList,
@@ -62,6 +67,11 @@ const menuItems = [
     url: "/admin/support",
     icon: Contact,
   },
+  {
+    title: "Quản lý bình luận",
+    url: "/admin/comments",
+    icon: MessagesSquare,
+  }
 ]
 
 interface AdminSidebarProps {

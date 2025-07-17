@@ -159,35 +159,65 @@ export default function RoomsPage() {
       const response = await fetch(`/api/rooms/${maPhong}/book-dates`);
       const data = await response.json();
 
-      if (response.ok && data.success && Array.isArray(data.data)) {
-        const actualBlockedDates: Date[] = [];
+      console.log("API response:", JSON.stringify(data, null, 2));
 
-        // Tạo danh sách khoảng ngày đã đặt
-        const bookedRanges: { start: Date; end: Date }[] = data.data.map(
-          (booking: { check_in: string; check_out: string }) => ({
-            start: new Date(booking.check_in),
-            end: new Date(booking.check_out),
+      if (response.ok && data.success && Array.isArray(data.data)) {
+        // Filter and validate bookings
+        const bookedRanges: { start: Date; end: Date }[] = data.data
+          .filter((booking: { check_in: string | null; check_out: string | null }) => {
+            if (!booking.check_in || !booking.check_out) {
+              console.warn("Skipping booking with null dates:", booking);
+              return false;
+            }
+            const start = new Date(booking.check_in + "T00:00:00.000Z");
+            const end = new Date(booking.check_out + "T00:00:00.000Z");
+            const isValid = !isNaN(start.getTime()) && !isNaN(end.getTime()) && start < end;
+            if (!isValid) {
+              console.warn("Skipping invalid booking:", booking);
+            }
+            return isValid;
           })
+          .map((booking: { check_in: string; check_out: string }) => ({
+            start: new Date(booking.check_in + "T00:00:00.000Z"),
+            end: new Date(booking.check_out + "T00:00:00.000Z"),
+          }));
+
+        console.log(
+          "Booked ranges:",
+          bookedRanges.map((r) => ({
+            start: r.start.toISOString(),
+            end: r.end.toISOString(),
+          }))
         );
 
-        // Tạo danh sách các ngày bị block (bao gồm cả cận biên)
         const extendedBlockedDates: Set<string> = new Set();
 
+        // Add all dates from check_in to check_out
         bookedRanges.forEach(({ start, end }) => {
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            extendedBlockedDates.add(new Date(d).toDateString());
+            extendedBlockedDates.add(
+              new Date(d.getFullYear(), d.getMonth(), d.getDate()).toDateString()
+            );
           }
         });
 
-        // Ẩn thêm cả các ngày trước vùng bị block nếu check-out của người dùng rơi vào vùng block
+        // Add the day before check_in
         bookedRanges.forEach(({ start }) => {
           const dayBefore = new Date(start);
           dayBefore.setDate(dayBefore.getDate() - 1);
-          extendedBlockedDates.add(dayBefore.toDateString()); // 👈 Thêm ngày 12 nếu block bắt đầu từ 13
+          console.log("Adding day before:", dayBefore.toISOString());
+          extendedBlockedDates.add(
+            new Date(dayBefore.getFullYear(), dayBefore.getMonth(), dayBefore.getDate()).toDateString()
+          );
         });
 
-        // Chuyển Set về mảng Date[]
+        // Convert Set to array of Date objects
         const result = Array.from(extendedBlockedDates).map((d) => new Date(d));
+        console.log(
+          "Blocked dates:",
+          result.map((d) => d.toISOString())
+        );
+
         setBookedDates(result);
       } else {
         console.error("Invalid booked dates response:", data);

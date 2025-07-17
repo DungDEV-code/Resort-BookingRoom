@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { maPhong: string } }
+  { params }: { params: Promise<{ maPhong: string }> }
 ) {
-  const { maPhong } = context.params;
+  const { maPhong } = await params;
 
   if (!maPhong) {
     return NextResponse.json(
@@ -23,9 +23,17 @@ export async function GET(
       },
     });
 
-    console.log("Bookings:", bookings); // 👈 kiểm tra kỹ
+    console.log("Bookings for maPhong:", maPhong, JSON.stringify(bookings, null, 2));
 
-    return NextResponse.json({ success: true, data: bookings });
+    // Chuẩn hóa định dạng ngày và lọc bỏ các booking không hợp lệ
+    const formattedBookings = bookings
+      .filter((booking) => booking.check_in && booking.check_out) // Lọc bỏ booking có check_in hoặc check_out là null
+      .map((booking) => ({
+        check_in: booking.check_in!.toISOString().split("T")[0], // Sử dụng ! vì đã lọc null
+        check_out: booking.check_out!.toISOString().split("T")[0],
+      }));
+
+    return NextResponse.json({ success: true, data: formattedBookings });
   } catch (error) {
     console.error("Lỗi Prisma:", error);
     return NextResponse.json(
