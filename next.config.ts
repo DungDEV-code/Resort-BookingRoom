@@ -25,5 +25,7 @@ images: {
     ],
   },
 };
-
+export const config = {
+  matcher: ["/admin", "/admin/:path*"], // Chạy middleware cho tất cả đường dẫn bắt đầu bằng /admin
+}
 export default nextConfig;

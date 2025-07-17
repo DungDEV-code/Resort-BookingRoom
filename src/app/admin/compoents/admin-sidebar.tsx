@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 const menuItems = [
   {
     title: "Dashboard",
-    url: "/admin",
+    url: "/admin/dashboard",
     icon: Home,
   },
   {

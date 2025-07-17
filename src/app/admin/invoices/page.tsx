@@ -323,7 +323,7 @@ const InvoicesPage = () => {
                 </div>
 
                 {/* Thanh tìm kiếm */}
-                <div className="w-full md:w-8">
+                <div className="w-full md:w-80">
                     <input
                         type="text"
                         placeholder="Tìm theo mã hóa đơn hoặc mã đặt phòng"

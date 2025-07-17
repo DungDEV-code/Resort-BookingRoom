@@ -83,6 +83,7 @@ model khachhang {
   membership     membership? @relation(fields: [maMembership], references: [maMembership])
   roleadminuser  roleadminuser? @relation(fields: [maUser], references: [email]) // ✅ Giữ lại ở đây
   datphong datphong[]
+  lienhe_hotro   lienhe_hotro[] 
   @@index([maUser], map: "maUser")
   @@index([maMembership], map: "maMembership")
 }
@@ -157,7 +158,24 @@ model binhluan {
   datphong  datphong @relation(fields: [maDatPhong], references: [maDatPhong])
   @@index([maDatPhong], map: "maDatPhong")
 }
+model lienhe_hotro {
+  maLienHeHotro String              @id @db.VarChar(20)
+  maKhachHang   String              @db.VarChar(20) // Bắt buộc phải có
+  tieuDe        String              @db.VarChar(150)
+  noiDung       String              @db.Text
+  trangThai     lienhe_hotro_trangThai @default(Moi)
+  ngayTao       DateTime            @default(now()) @db.Timestamp(0)
+  ngayCapNhat   DateTime?           @db.Timestamp(0)
 
+  khachhang     khachhang           @relation(fields: [maKhachHang], references: [maKhachHang])
+
+  @@index([maKhachHang], map: "maKhachHang")
+}
+enum lienhe_hotro_trangThai {
+  Moi          @map("Mới")
+  DangXuLy     @map("Đang xử lý")
+  DaXuLy       @map("Đã xử lý")
+}
 enum membershipLevel {
   Bronze  @map("Đồng")
   Silver  @map("Bạc")

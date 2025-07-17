@@ -16,21 +16,57 @@ export default function LoginPage() {
     const [rememberMe, setRememberMe] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
         setError("")
 
-        setTimeout(() => {
-            if (email === "admin@example.com" && password === "admin123") {
-                toast.success("Đăng nhập thành công!")
-                // Redirect tại đây nếu muốn
-            } else {
-                setError("Email hoặc mật khẩu không chính xác")
+        try {
+            const apiUrl = `${BASE_URL}/admin/api/login`
+            console.log("Sending request to:", apiUrl)
+            const res = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            })
+
+            const contentType = res.headers.get("content-type")
+            if (!contentType || !contentType.includes("application/json")) {
+                const text = await res.text()
+                console.error("Received non-JSON response:", text)
+                setError("Lỗi server: Phản hồi không phải JSON")
+                return
             }
+
+            const data = await res.json()
+            if (!res.ok) {
+                setError(data.error || "Đăng nhập thất bại")
+                return
+            }
+
+            // Assuming the API returns user data like { email, name, token, ... }
+            const userData = {
+                email: data.email || email, // Fallback to input email if API doesn't return it
+                name: data.name || "Admin User", // Fallback name if not provided
+            }
+
+            // Store user data in localStorage
+            if (rememberMe) {
+                localStorage.setItem("user", JSON.stringify(userData))
+            } else {
+                sessionStorage.setItem("user", JSON.stringify(userData)) // Use sessionStorage for non-persistent storage
+            }
+
+            toast.success("Đăng nhập thành công!")
+            window.location.href = "/admin/dashboard"
+        } catch (err) {
+            console.error("Fetch error:", err)
+            setError("Đã có lỗi xảy ra")
+        } finally {
             setIsLoading(false)
-        }, 1500)
+        }
     }
 
     useEffect(() => {
@@ -40,6 +76,7 @@ export default function LoginPage() {
     }, [error])
 
     return (
+        // ... (rest of the component remains unchanged)
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
