@@ -93,10 +93,11 @@ model lichlamviec {
   maNhanVien    String                   @db.VarChar(20)
   maPhong       String                   @db.VarChar(20)
   ngayLam       DateTime                 @db.Date
-  caLam         lichlamviec_caLam?
-  loaiCV        String                   @db.VarChar(20)
-  trangThaiCV   lichlamviec_trangThaiCV?
 
+  loaiCV        LoaiCongViec
+  trangThaiCV   lichlamviec_trangThaiCV?
+  nhanvien       nhanvien  @relation(fields: [maNhanVien], references: [maNhanVien])
+  phong          phong     @relation(fields: [maPhong], references: [maPhong])
   @@index([maNhanVien], map: "maNhanVien")
   @@index([maPhong], map: "maPhong")
 }
@@ -122,6 +123,7 @@ model nhanvien {
   ngayVaoLam       DateTime                   @db.Date
   viTri            String                     @db.VarChar(50)
   roleadminuser  roleadminuser? @relation(fields: [maUser], references: [email])
+  lichlamviec  lichlamviec[]
   @@index([maUser], map: "maUser")
 }
 
@@ -135,6 +137,7 @@ model phong {
   tenPhong    String           @default("") @db.VarChar(50)
   loaiphong   loaiphong        @relation(fields: [maLoaiPhong], references: [maLoaiPhong]) // ✅ thêm dòng này
   datphong   datphong[] 
+  lichlamviec  lichlamviec[]
   @@index([maLoaiPhong], map: "maLoaiPhong")
 }
 
@@ -182,7 +185,10 @@ enum membershipLevel {
   Gold    @map("Vàng")
   Diamond @map("Kim Cương")
 }
-
+enum LoaiCongViec {
+  DonDep   @map("Dọn Dẹp")
+  SuaChua  @map("Sửa Chữa")
+}
 enum hoadon_trangThaiHD {
   ChuaThanhToan @map("Chưa Thanh Toán")
   DaThanhToan   @map("Đã Thanh Toán")
@@ -210,11 +216,7 @@ enum nhanvien_trangThaiLamViec {
   Nghi    @map("Nghỉ")
 }
 
-enum lichlamviec_caLam {
-  CaSang  @map("Ca Sáng")
-  CaTrua  @map("Ca Trưa")
-  CaChieu @map("Ca Chiều")
-}
+
 
 enum roleadminuser_role {
   KhachHang @map("Khách Hàng")

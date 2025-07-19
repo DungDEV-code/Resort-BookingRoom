@@ -252,8 +252,8 @@ export async function POST(req: NextRequest) {
         maPhong,
         OR: [
           {
-            check_in: { lte: checkOutDate },
-            check_out: { gte: checkInDate },
+            check_in: { lt: checkOutDate },
+            check_out: { gt: checkInDate },
           },
         ],
       },
@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
       const orderId = maDatPhong;
       const orderInfo = `Thanh toán đặt phòng ${maDatPhong}`;
       const redirectUrl = "http://localhost:3000/rooms";
-      const ipnUrl = "https://6518b9dbdd9b.ngrok-free.app/api/momo-callback";
+      const ipnUrl = "https://15b1a4cd75af.ngrok-free.app/api/momo-callback";
       const amount = tongTienHoaDon.toString();
       const requestType = "payWithATM";
 

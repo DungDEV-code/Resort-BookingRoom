@@ -194,7 +194,7 @@ export default function RoomsPage() {
 
         // Add all dates from check_in to check_out
         bookedRanges.forEach(({ start, end }) => {
-          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
             extendedBlockedDates.add(
               new Date(d.getFullYear(), d.getMonth(), d.getDate()).toDateString()
             );

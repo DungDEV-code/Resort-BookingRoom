@@ -19,7 +19,7 @@ const menuItems = [
   },
   {
     title: "Quản lý lịch làm",
-    url: "/admin/schedules",
+    url: "/admin/work-schedule",
     icon: CalendarDays,
   },
   {
