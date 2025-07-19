@@ -188,52 +188,48 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
   };
 
   const handleSubmitComment = async () => {
-    if (!selectedBooking || !email || rating === 0 || !comment.trim()) {
-      toast.error("Lỗi", {
-        description: "Vui lòng nhập đánh giá và bình luận trước khi gửi!",
-        duration: 5000,
-        style: {
-          background: "rgb(254, 226, 226)",
-          border: "1px solid rgb(248, 113, 113)",
-        },
-      });
-      return;
-    }
-
     try {
       const response = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          maDatPhong: selectedBooking.maDatPhong,
-          maPhong: selectedBooking.phong.maPhong,
+          maDatPhong: selectedBooking?.maDatPhong,
+          maPhong: selectedBooking?.phong?.maPhong,
           noiDung: comment,
           danhGia: rating,
           ttenKhachHang: displayName,
         }),
       });
 
-      if (!response.ok) throw new Error("Gửi bình luận thất bại");
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error("Lỗi", {
+          description: result.message || "Đã xảy ra lỗi khi gửi bình luận",
+          duration: 5000,
+          style: {
+            background: "rgb(254, 226, 226)",
+            border: "1px solid rgb(248, 113, 113)",
+          },
+        });
+        return;
+      }
+
       toast.success("Thành công", {
-        description: "Bình luận đã được gửi thành công!",
+        description: result.message,
         duration: 5000,
         style: {
           background: "linear-gradient(to right, rgb(219, 234, 254), rgb(233, 213, 255))",
           border: "1px solid rgb(147, 197, 253)",
         },
       });
+
       setComment("");
       setRating(0);
       setSelectedBooking(null);
     } catch (err) {
-      toast.error("Lỗi", {
-        description: "Đã xảy ra lỗi khi gửi bình luận",
-        duration: 5000,
-        style: {
-          background: "rgb(254, 226, 226)",
-          border: "1px solid rgb(248, 113, 113)",
-        },
-      });
+      // Không cần toast.error ở đây nữa nếu API đã lo
+      console.error("Lỗi gửi bình luận:", err);
     }
   };
 
@@ -495,7 +491,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             <div>
               <p className="text-sm text-gray-600">Tổng tiền</p>
               <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(booking.hoadon?.[0]?.tongTien || booking.tongTien || 0)} 
+                {formatCurrency(booking.hoadon?.[0]?.tongTien || booking.tongTien || 0)}
               </p>
             </div>
           </div>
@@ -513,7 +509,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
 
   return (
     <>
-      <Toaster richColors position="top-right" duration={5000} />
+     
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-4 border-b border-gray-100">

@@ -120,44 +120,56 @@ export async function GET(request: NextRequest) {
         });
     }
     if (type === "top-service") {
-        const topService = await prisma.dichvudatphong.groupBy({
+        // 1. Lấy top 5 dịch vụ phổ biến nhất
+        const topServices = await prisma.dichvudatphong.groupBy({
             by: ["maDichVu"],
-            _count: { maDichVu: true },
-            orderBy: { _count: { maDichVu: "desc" } },
-            take: 1,
+            _sum: {
+                soLuong: true,
+                ThanhTien: true,
+            },
+            _count: {
+                maDichVu: true,
+            },
+            where: {
+                maDichVu: {
+                    not: "", // vì maDichVu là string, dùng "" thay vì undefined/null
+                },
+            },
+            orderBy: {
+                _sum: {
+                    soLuong: "desc",
+                },
+            },
+            take: 5,
         });
 
-        if (topService.length === 0) {
-            return NextResponse.json({ topService: null });
-        }
+        // 2. Lấy thông tin chi tiết dịch vụ
+        const maDVs = topServices.map((s) => s.maDichVu);
 
-        const maDichVu = topService[0].maDichVu;
-
-        const dichVu = await prisma.dichvu.findUnique({
-            where: { maDV: maDichVu },
-        });
-
-        // Tính tổng số lượng sử dụng dịch vụ đó
-        const usage = await prisma.dichvudatphong.aggregate({
-            where: { maDichVu },
-            _sum: { soLuong: true },
-        });
-
-        const soLuong = usage._sum.soLuong || 0;
-        const donGia = dichVu?.giaDV?.toNumber() || 0;
-        const doanhThu = donGia * soLuong;
-
-        return NextResponse.json({
-            topService: {
-                maDichVu: dichVu?.maDV,
-                tenDichVu: dichVu?.tenDV,
-                soLanSuDung: topService[0]._count.maDichVu,
-                tongSoLuong: soLuong,
-                donGia: donGia,
-                doanhThu: doanhThu,
+        const dichVus = await prisma.dichvu.findMany({
+            where: {
+                maDV: {
+                    in: maDVs,
+                },
             },
         });
+
+        // 3. Gộp dữ liệu
+        const result = topServices.map((s) => {
+            const matchedDV = dichVus.find((dv) => dv.maDV === s.maDichVu);
+            return {
+                maDichVu: s.maDichVu,
+                tenDV: matchedDV?.tenDV ?? "Không xác định",
+                giaDV: matchedDV?.giaDV ? Number(matchedDV.giaDV) : 0,
+                tongSoLuong: s._sum?.soLuong ?? 0,
+                doanhThu: s._sum?.ThanhTien ? Number(s._sum.ThanhTien) : 0,
+                soLanSuDung: s._count?.maDichVu ?? 0,
+            };
+        });
+
+        return NextResponse.json({ services: result });
     }
+
 
     if (type === "booking-stats") {
         const totalBookings = await prisma.datphong.count();

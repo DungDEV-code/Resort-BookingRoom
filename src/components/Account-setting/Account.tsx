@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useAuth } from "@/context/auth-context"
-import toast from "react-hot-toast"
+import { toast } from "sonner"
+
 
 export default function Account({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth()
@@ -151,6 +152,7 @@ export default function Account({ open, onClose }: { open: boolean; onClose: () 
   }
 
   const handleAccountSubmit = async () => {
+
     if (accountForm.passWord.length > 0 && accountForm.passWord.length < 4) {
       toast.error("Mật khẩu phải có ít nhất 4 ký tự!")
       return
@@ -176,6 +178,10 @@ export default function Account({ open, onClose }: { open: boolean; onClose: () 
   }
 
   const handleSubmit = async () => {
+    console.log("📦 Dữ liệu gửi lên API:", {
+      ...formData,
+      maUser: user.email,
+    });
     // Kiểm tra xem khách hàng đã tồn tại chưa
     const checkRes = await fetch(`/api/khachhang/${user.email}`);
     const isExist = checkRes.ok;
@@ -193,9 +199,11 @@ export default function Account({ open, onClose }: { open: boolean; onClose: () 
       toast.success(isExist ? "Cập nhật thành công!" : "Lưu thông tin thành công!");
       onClose();
     } else {
-      toast.error("Đã xảy ra lỗi, vui lòng thử lại!");
+      const data = await res.json().catch(() => null);
+      const errorMessage = data?.error || "Đã xảy ra lỗi, vui lòng thử lại!";
+      toast.error(errorMessage);
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

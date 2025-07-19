@@ -21,14 +21,7 @@ import {
     RotateCcw,
 } from "lucide-react"
 
-// Hàm chuẩn hóa chuỗi tiếng Việt
-function removeDiacritics(str: string): string {
-    return str
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/đ/g, "d")
-        .replace(/Đ/g, "D")
-}
+
 
 interface Invoice {
     maHD: string

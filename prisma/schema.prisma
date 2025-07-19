@@ -20,6 +20,7 @@ model datphong {
   maDatPhong  String              @id @db.VarChar(20)
   maKhachHang String              @db.VarChar(20)
   maPhong     String              @db.VarChar(20)
+  maVoucher  String?              @db.VarChar(20)
   check_in    DateTime?           @db.Date
   check_out   DateTime?           @db.Date
   trangThai   datphong_trangThai?
@@ -30,11 +31,22 @@ model datphong {
   khachhang         khachhang         @relation(fields: [maKhachHang], references: [maKhachHang])
   dichvudatphong dichvudatphong[]
   hoadon         hoadon?             @relation("DatPhong_HoaDon")
+  voucher    voucher? @relation(fields: [maVoucher], references: [maVoucher])
   binhluan      binhluan[]
   @@index([maKhachHang], map: "maKhachHang")
   @@index([maPhong], map: "maPhong")
 }
-
+model voucher {
+  maVoucher      String   @id @db.VarChar(20)
+  tenVoucher     String   @db.VarChar(100)
+  moTa           String?  @db.Text
+  phanTramGiam   Int      @db.TinyInt       // Ví dụ: 10 cho 10%
+  ngayBatDau     DateTime @db.Date
+  ngayKetThuc    DateTime @db.Date
+  dieuKienApDung Decimal? @db.Decimal(12, 2) // đơn từ bao nhiêu mới áp dụng
+  trangThai      voucher_trangThai? @default(ConHieuLuc)
+  datphong       datphong[]  // quan hệ 1-n: mỗi lần đặt có thể dùng 1 voucher
+}
 model dichvu {
   maDV   String  @id @db.VarChar(20)
   tenDV  String  @db.VarChar(50)
@@ -184,6 +196,11 @@ enum membershipLevel {
   Silver  @map("Bạc")
   Gold    @map("Vàng")
   Diamond @map("Kim Cương")
+}
+enum voucher_trangThai {
+  ConHieuLuc     @map("Còn hiệu lực")
+  HetHan         @map("Hết hạn")
+  DaAn           @map("Đã ẩn")
 }
 enum LoaiCongViec {
   DonDep   @map("Dọn Dẹp")

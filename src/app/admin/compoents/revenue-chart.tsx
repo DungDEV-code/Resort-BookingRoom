@@ -1,79 +1,81 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 interface RevenueChartProps {
   data: Array<{
-    month: string
-    revenue: number
-    bookings: number
+    name: string
+    doanhThu: number
   }>
 }
 
 export function RevenueChart({ data }: RevenueChartProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("vi-VN", {
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
-      notation: "compact",
+      maximumFractionDigits: 0,
     }).format(value)
-  }
-
-  const formatMonth = (month: string) => {
-    const [year, monthNum] = month.split("-")
-    return `${monthNum}/${year}`
-  }
-
-  const chartData = data.map((item) => ({
-    ...item,
-    month: formatMonth(item.month),
-    revenue: Number(item.revenue),
-  }))
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Doanh Thu Theo Tháng</CardTitle>
-          <CardDescription>Doanh thu 12 tháng gần nhất</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={formatCurrency} />
-              <Tooltip
-                formatter={(value: number) => [formatCurrency(value), "Doanh thu"]}
-                labelFormatter={(label) => `Tháng ${label}`}
+    <Card className="shadow-md rounded-2xl">
+      <CardHeader>
+        <CardTitle className="text-xl font-semibold text-blue-600">
+          Thống Kê Doanh Thu
+        </CardTitle>
+        <CardDescription className="text-gray-500">
+          Tổng doanh thu và doanh thu trong tháng này
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              barCategoryGap={30}
+              margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" />
+              <YAxis
+                tickFormatter={(value) => `${value / 1_000_000} triệu`}
+                width={80}
               />
-              <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} dot={{ fill: "#8884d8" }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+              <Tooltip
+                formatter={(value: number) =>
+                  new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                    maximumFractionDigits: 0,
+                  }).format(value)
+                }
+              />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Số Lượng Đặt Phòng</CardTitle>
-          <CardDescription>Số đặt phòng theo tháng</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip
-                formatter={(value: number) => [value, "Đặt phòng"]}
-                labelFormatter={(label) => `Tháng ${label}`}
+              <Bar
+                dataKey="doanhThu"
+                fill="#3b82f6"
+                radius={[8, 8, 0, 0]}
+                maxBarSize={60}
               />
-              <Bar dataKey="bookings" fill="#82ca9d" />
             </BarChart>
           </ResponsiveContainer>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -42,7 +42,7 @@ const titleMap: Record<string, string> = {
   "/admin/bookings": "Quản lý đơn đặt phòng",
   "/admin/invoices": "Quản lý hóa đơn",
   "/admin/services-bookings": "Quản lý dịch vụ đặt phòng",
-  "/admin/promotions": "Quản lý ưu đãi",
+  "/admin/vouchers": "Quản lý ưu đãi",
   "/admin/accounts": "Quản lý tài khoản",
   "/admin/support": "Liên hệ hỗ trợ",
 }

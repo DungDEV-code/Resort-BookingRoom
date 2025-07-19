@@ -62,37 +62,88 @@ export async function GET(
 // Cập nhật thông tin khách hàng
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { email: string } }
+  context: { params: { email: string } } | { params: Promise<{ email: string }> }
 ) {
   try {
-    const email = decodeURIComponent(params.email);
+    const { email } = await context.params;
     const body = await req.json();
 
     const { tenKhachHang, ngaySinh, gioiTinh, diaChi, soDienThoai } = body;
 
-    if (!tenKhachHang || !ngaySinh || !gioiTinh || !diaChi || !soDienThoai) {
-      return NextResponse.json({ error: "Thiếu thông tin bắt buộc" }, { status: 400 });
+    // Kiểm tra thiếu trường
+    if (
+      !tenKhachHang?.trim() ||
+      !ngaySinh ||
+      !gioiTinh?.trim() ||
+      !diaChi?.trim() ||
+      !soDienThoai?.trim()
+    ) {
+      return NextResponse.json(
+        { error: "Thiếu thông tin bắt buộc hoặc dữ liệu rỗng" },
+        { status: 400 }
+      );
     }
 
+    // Kiểm tra ngày sinh hợp lệ
+    const parsedDate = new Date(ngaySinh);
+    if (isNaN(parsedDate.getTime())) {
+      return NextResponse.json(
+        { error: "Ngày sinh không hợp lệ" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra giới tính hợp lệ
+    const validGioiTinh = ["Nam", "Nữ", "Khác"];
+    if (!validGioiTinh.includes(gioiTinh)) {
+      return NextResponse.json(
+        { error: "Giới tính không hợp lệ" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra định dạng số điện thoại (chỉ chứa số, độ dài từ 9-15 ký tự)
+    const digitsOnlyRegex = /^[0-9]+$/;
+
+    if (!digitsOnlyRegex.test(soDienThoai)) {
+      return NextResponse.json(
+        { error: "Số điện thoại chỉ được chứa chữ số" },
+        { status: 400 }
+      );
+    }
+
+    if (soDienThoai.length !== 10) {
+      return NextResponse.json(
+        { error: "Số điện thoại phải có đúng 10 chữ số" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra khách hàng tồn tại
     const khachHang = await prisma.khachhang.findFirst({
       where: { maUser: email },
     });
 
     if (!khachHang) {
-      return NextResponse.json({ error: "Không tìm thấy khách hàng" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Không tìm thấy khách hàng" },
+        { status: 404 }
+      );
     }
 
+    // Cập nhật thông tin
     await prisma.khachhang.updateMany({
       where: { maUser: email },
       data: {
-        tenKhachHang,
-        ngaySinh: new Date(ngaySinh),
+        tenKhachHang: tenKhachHang.trim(),
+        ngaySinh: parsedDate,
         gioiTinh,
-        diaChi,
-        soDienThoai,
+        diaChi: diaChi.trim(),
+        soDienThoai: soDienThoai.trim(),
       },
     });
 
+    // Trả về dữ liệu cập nhật
     const updated = await prisma.khachhang.findFirst({
       where: { maUser: email },
       select: {
@@ -124,3 +175,4 @@ export async function PUT(
     return NextResponse.json({ error: "Cập nhật thất bại" }, { status: 500 });
   }
 }
+

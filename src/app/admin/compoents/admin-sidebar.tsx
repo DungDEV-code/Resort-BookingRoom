@@ -54,7 +54,7 @@ const menuItems = [
   },
   {
     title: "Quản lý ưu đãi",
-    url: "/admin/promotions",
+    url: "/admin/vouchers",
     icon: Percent,
   },
   {

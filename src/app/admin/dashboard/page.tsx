@@ -13,30 +13,41 @@ export default function AdminPage() {
   const [chartData, setChartData] = useState<any[]>([])
   const [popularServices, setPopularServices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
   useEffect(() => {
-    const fetchAdditionalData = async () => {
+    const fetchStats = async () => {
       try {
-        const [revenueRes, servicesRes] = await Promise.all([
-          fetch("/api/dashboard/revenue"),
-          fetch("/api/dashboard/services"),
-        ])
+        const [revenueRes, serviceRes] = await Promise.all([
+          fetch(`${BASE_URL}/admin/api/stats?type=total-revenue`),
+          fetch(`${BASE_URL}/admin/api/stats?type=top-service`),
+        ]);
 
-        if (revenueRes.ok && servicesRes.ok) {
-          const [revenue, services] = await Promise.all([revenueRes.json(), servicesRes.json()])
+        if (revenueRes.ok && serviceRes.ok) {
+          const revenue = await revenueRes.json();
+          const service = await serviceRes.json();
 
-          setChartData(revenue.revenueData || [])
-          setPopularServices(services.popularServices || [])
+          setChartData([
+            {
+              name: "Tổng doanh thu",
+              doanhThu: revenue.totalRevenue || 0,
+            },
+            {
+              name: "Doanh thu tháng này",
+              doanhThu: revenue.monthlyRevenue || 0,
+            },
+          ]);
+
+          setPopularServices(service.services || []);
         }
       } catch (error) {
-        console.error("Error fetching additional data:", error)
+        console.error("Error fetching stats:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchAdditionalData()
-  }, [])
+    fetchStats();
+  }, []);
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
@@ -48,15 +59,15 @@ export default function AdminPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <RoomStatsCard />
         <RevenueStatsCard />
-        <CustomerStatsCard />
+        <BookingStatsCard />
       </div>
 
       {/* Secondary Stats */}
       <div className="grid gap-4 md:grid-cols-2">
-        <TopServiceCard />
-        <BookingStatsCard />
+        {!loading && popularServices.length > 0 && <PopularServices services={popularServices} />}
+        <CustomerStatsCard />
       </div>
-
+   
       {/* Charts Section */}
       {!loading && chartData && chartData.length > 0 && (
         <div className="space-y-4">
@@ -65,10 +76,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Additional Data Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {!loading && popularServices.length > 0 && <PopularServices services={popularServices} />}
-      </div>
+
     </div>
   )
 }
