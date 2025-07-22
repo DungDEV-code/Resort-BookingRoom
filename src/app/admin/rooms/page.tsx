@@ -39,7 +39,7 @@ import {
 import Image from "next/image"
 import { toast } from "sonner"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { RoomDialog } from "../compoents/RoomDialog"
+import { RoomDialog } from "../components/RoomDialog"
 
 interface Room {
     maPhong: string

@@ -8,19 +8,19 @@ import {
   phong_tinhTrang,
   dichvudatphong,
 } from "@/generated/prisma";
-
+// ✅ Interface định nghĩa cấu trúc token JWT đã decode
 interface DecodedToken {
   email: string;
   userName: string;
   role: string;
 }
-
+// ✅ Interface định dạng dữ liệu trả về cho các trạng thái đặt phòng
 interface BookingStatus {
   new: FormattedBooking[];
   old: FormattedBooking[];
   all: FormattedBooking[];
 }
-
+// ✅ Interface định dạng thông tin đặt phòng gửi về client
 interface FormattedBooking {
   maDatPhong: string;
   check_in: string;
@@ -28,6 +28,7 @@ interface FormattedBooking {
   trangThai: string | null;
   tongTien: number;
   thoiGianDat: string;
+  lyDoHuy?: string | null;
   phong: {
     maPhong: string;
     tenPhong: string;
@@ -54,7 +55,7 @@ interface FormattedBooking {
     ngayTaoHD: string;
   }[];
 }
-
+// ✅ Interface định nghĩa dữ liệu request từ client khi đặt phòng
 interface BookingRequest {
   maPhong: string;
   tenKhachHang: string;
@@ -63,6 +64,8 @@ interface BookingRequest {
   checkIn: string;
   checkOut: string;
   phuongThucThanhToan: string;
+  trangThai:'ChoXacNhan';
+  maVoucher?: string;
   dichVuDat: {
     maDichVu: string;
     tenDichVu: string;
@@ -72,7 +75,7 @@ interface BookingRequest {
   }[];
   tongTien: number;
 }
-
+// ✅ API GET: Lấy lịch sử đặt phòng của khách hàng
 export async function GET(req: NextRequest) {
   try {
     // 1. Xác thực qua token hoặc email
@@ -91,7 +94,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "Lỗi server nội bộ" }, { status: 500 });
   }
 }
-
+// ✅ Hàm xác thực và tìm mã khách hàng từ token hoặc email
 async function getMaKhachHangFromRequest(
   req: NextRequest,
   emailFromBody?: string
@@ -121,6 +124,7 @@ async function getMaKhachHangFromRequest(
   return { success: true, maKhachHang: user.khachhang.maKhachHang };
 }
 
+// ✅ Truy vấn danh sách đặt phòng theo mã khách hàng
 async function getCustomerBookings(maKhachHang: string) {
   return prisma.datphong.findMany({
     where: { maKhachHang },
@@ -159,6 +163,7 @@ async function getCustomerBookings(maKhachHang: string) {
   });
 }
 
+// ✅ Phân loại đặt phòng thành nhóm: mới, cũ, tất cả
 function categorizeBookings(bookings: any[]): BookingStatus {
   const formatted = bookings.map((b): FormattedBooking => ({
     maDatPhong: b.maDatPhong,
@@ -167,6 +172,7 @@ function categorizeBookings(bookings: any[]): BookingStatus {
     trangThai: b.trangThai,
     tongTien: Number(b.tongTien),
     thoiGianDat: b.thoiGianDat.toISOString(),
+    lyDoHuy: b.lyDoHuy,
     phong: {
       maPhong: b.phong.maPhong,
       tenPhong: b.phong.tenPhong,
@@ -187,18 +193,18 @@ function categorizeBookings(bookings: any[]): BookingStatus {
     })),
     hoadon: b.hoadon
       ? [{
-        maHD: b.hoadon.maHD,
-        phuongThucThanhToan: b.hoadon.phuongThucThanhToan,
-        trangThaiHD: b.hoadon.trangThaiHD,
-        tongTien: Number(b.hoadon.tongTien),
-        ngayTaoHD: b.hoadon.ngayTaoHD.toISOString(),
-      }]
+          maHD: b.hoadon.maHD,
+          phuongThucThanhToan: b.hoadon.phuongThucThanhToan,
+          trangThaiHD: b.hoadon.trangThaiHD,
+          tongTien: Number(b.hoadon.tongTien),
+          ngayTaoHD: b.hoadon.ngayTaoHD.toISOString(),
+        }]
       : [],
   }));
 
   return {
-    new: formatted.filter((b) => b.trangThai === null),
-    old: formatted.filter((b) => b.trangThai === "Check_in" || b.trangThai === "Check_out"),
+    new: formatted.filter((b) => b.trangThai === null || b.trangThai === "ChoXacNhan" || b.trangThai === "YeuCauHuy"),
+    old: formatted.filter((b) => b.trangThai === "Check_in" || b.trangThai === "Check_out" || b.trangThai === "DaHuy"),
     all: formatted,
   };
 }
@@ -265,7 +271,24 @@ export async function POST(req: NextRequest) {
     const maDatPhong = generateShortId();
     const millisecondsPerDay = 1000 * 60 * 60 * 24;
     const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / millisecondsPerDay);
-    const tongTienDatPhong = room.gia.toNumber() * nights;
+    let tongTienDatPhong = room.gia.toNumber() * nights;
+
+    if (body.maVoucher) {
+      const voucher = await prisma.voucher.findUnique({
+        where: { maVoucher: body.maVoucher },
+      });
+
+      if (voucher && voucher.trangThai === "ConHieuLuc") {
+        const today = new Date();
+        if (today >= voucher.ngayBatDau && today <= voucher.ngayKetThuc) {
+          if (!voucher.dieuKienApDung || tongTienDatPhong >= Number(voucher.dieuKienApDung)) {
+            const giamGia = (voucher.phanTramGiam / 100) * tongTienDatPhong;
+            tongTienDatPhong -= giamGia;
+          }
+        }
+      }
+    }
+
 
     let tongTienDichVu = 0;
     if (dichVuDat && Array.isArray(dichVuDat)) {
@@ -282,7 +305,7 @@ export async function POST(req: NextRequest) {
       const orderId = maDatPhong;
       const orderInfo = `Thanh toán đặt phòng ${maDatPhong}`;
       const redirectUrl = "http://localhost:3000/rooms";
-      const ipnUrl = "https://15b1a4cd75af.ngrok-free.app/api/momo-callback";
+      const ipnUrl = "https://d7b88ba38185.ngrok-free.app/api/momo-callback";
       const amount = tongTienHoaDon.toString();
       const requestType = "payWithATM";
 
@@ -290,6 +313,8 @@ export async function POST(req: NextRequest) {
         maDatPhong,
         maKhachHang: authResult.maKhachHang,
         maPhong,
+
+        maVoucher: body.maVoucher || null, // ✅ thêm dòng này
         checkIn: checkInDate.toISOString(),
         checkOut: checkOutDate.toISOString(),
         tongTienDatPhong: tongTienDatPhong.toString(),
@@ -379,6 +404,8 @@ export async function POST(req: NextRequest) {
             maDatPhong,
             maKhachHang: authResult.maKhachHang,
             maPhong,
+            trangThai:'ChoXacNhan',
+            maVoucher: body.maVoucher || undefined,
             check_in: checkInDate,
             check_out: checkOutDate,
             tongTien: tongTienDatPhong,
@@ -433,6 +460,57 @@ export async function POST(req: NextRequest) {
     );
   } catch (error: any) {
     console.error("❌ Lỗi khi đặt phòng:", error);
+    return NextResponse.json(
+      { success: false, message: "Lỗi server nội bộ", error: error.message || error },
+      { status: 500 }
+    );
+  }
+}
+export async function DELETE(req: NextRequest) {
+  try {
+    const { maDatPhong, lyDoHuy } = await req.json();
+
+    if (!maDatPhong) {
+      return NextResponse.json({ success: false, message: "Thiếu mã đặt phòng" }, { status: 400 });
+    }
+
+    const authResult = await getMaKhachHangFromRequest(req);
+    if (!authResult.success) {
+      return NextResponse.json({ message: authResult.message }, { status: authResult.status });
+    }
+
+    const booking = await prisma.datphong.findUnique({
+      where: { maDatPhong },
+      include: { hoadon: true },
+    });
+
+    if (!booking) {
+      return NextResponse.json({ success: false, message: "Không tìm thấy đặt phòng" }, { status: 404 });
+    }
+
+    if (booking.maKhachHang !== authResult.maKhachHang) {
+      return NextResponse.json({ success: false, message: "Không có quyền hủy đặt phòng này" }, { status: 403 });
+    }
+
+    if (booking.trangThai !== null && booking.trangThai !== "ChoXacNhan") {
+      return NextResponse.json({ success: false, message: "Chỉ có thể yêu cầu hủy các đặt phòng mới hoặc chờ xác nhận" }, { status: 400 });
+    }
+
+    // if (booking.hoadon?.phuongThucThanhToan === "ChuyenKhoan" && booking.hoadon?.trangThaiHD === "DaThanhToan") {
+    //   return NextResponse.json({ success: false, message: "Không thể hủy đặt phòng đã thanh toán qua chuyển khoản" }, { status: 400 });
+    // }
+
+    await prisma.datphong.update({
+      where: { maDatPhong },
+      data: {
+        trangThai: "YeuCauHuy",
+        lyDoHuy: lyDoHuy || "Khách hàng yêu cầu hủy",
+      },
+    });
+
+    return NextResponse.json({ success: true, message: "Yêu cầu hủy đặt phòng đã được gửi" }, { status: 200 });
+  } catch (error: any) {
+    console.error("❌ Lỗi khi yêu cầu hủy đặt phòng:", error);
     return NextResponse.json(
       { success: false, message: "Lỗi server nội bộ", error: error.message || error },
       { status: 500 }

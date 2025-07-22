@@ -10,7 +10,7 @@ import { Users, UserCheck, UserX, Plus, XCircle, Search, Pencil, Phone, Calendar
 import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
-import EmployeeDialog from "../compoents/EmployeeDialog"
+import EmployeeDialog from "../components/EmployeeDialog"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 

@@ -1,10 +1,10 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/auth-context";
+"use client"
+import type React from "react"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/context/auth-context"
 import {
   Loader2,
   AlertCircle,
@@ -17,93 +17,102 @@ import {
   Eye,
   Package,
   MessageSquare,
-  Star as StarIcon,
+  StarIcon,
   Receipt,
-} from "lucide-react";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
-import { Textarea } from "@/components/ui/textarea";
-import { Toaster, toast } from "sonner";
-import { useSession } from "next-auth/react";
+  XCircle,
+  UserCheck,
+  LogOut,
+  Hourglass,
+  Ban,
+  HelpCircle,
+  RotateCcw,
+} from "lucide-react"
+import { format } from "date-fns"
+import { vi } from "date-fns/locale"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
+import { useSession } from "next-auth/react"
+import { Label } from "@/components/ui/label"
 
 interface ServiceDetail {
-  ma: string;
-  tenDichVuLucDat: string;
-  donGiaLucDat: number;
-  soLuong: number;
-  thanhTien: number;
+  ma: string
+  tenDichVuLucDat: string
+  donGiaLucDat: number
+  soLuong: number
+  thanhTien: number
 }
 
 interface Invoice {
-  maHD: string;
-  phuongThucThanhToan: string;
-  trangThaiHD: "ChuaThanhToan" | "DaThanhToan" | null;
-  tongTien: number;
-  ngayTaoHD: string;
+  maHD: string
+  phuongThucThanhToan: string
+  trangThaiHD: "ChuaThanhToan" | "DaThanhToan" | null
+  tongTien: number
+  ngayTaoHD: string
 }
 
 interface Booking {
-  maDatPhong: string;
-  check_in: string;
-  check_out: string;
-  trangThai: "Check_in" | "Check_out" | null;
-  tongTien: number;
-  thoiGianDat: string;
+  maDatPhong: string
+  check_in: string
+  check_out: string
+  trangThai: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan"
+  tongTien: number
+  thoiGianDat: string
   phong: {
-    maPhong: string;
-    tenPhong: string;
-    gia: number;
-    hinhAnh: string;
+    maPhong: string
+    tenPhong: string
+    gia: number
+    hinhAnh: string
     loaiphong: {
-      tenLoaiPhong: string;
-      soNguoi: number;
-      soGiuong: number;
-    };
-  };
-  dichvudatphong: ServiceDetail[];
-  hoadon: Invoice[];
+      tenLoaiPhong: string
+      soNguoi: number
+      soGiuong: number
+    }
+  }
+  dichvudatphong: ServiceDetail[]
+  hoadon: Invoice[]
 }
 
 interface BookingManagementProps {
-  open: boolean;
-  onClose: () => void;
+  open: boolean
+  onClose: () => void
 }
 
 const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) => {
+  const [newBookings, setNewBookings] = useState<Booking[]>([])
+  const [oldBookings, setOldBookings] = useState<Booking[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [comment, setComment] = useState("")
+  const [rating, setRating] = useState(0)
+  const [cancelReason, setCancelReason] = useState("")
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
+  const { user: localUser } = useAuth()
+  const { data: session } = useSession()
 
-  const [newBookings, setNewBookings] = useState<Booking[]>([]);
-  const [oldBookings, setOldBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [comment, setComment] = useState("");
-  const [rating, setRating] = useState(0);
-  const { user: localUser } = useAuth();
-  const { data: session } = useSession();
+  const email = session?.user?.email || localUser?.email
+  const displayName = session?.user?.name || localUser?.name
 
-  const email = session?.user?.email || localUser?.email;
-  const displayName = session?.user?.name || localUser?.name;
   useEffect(() => {
     if (email && open) {
       const fetchBookings = async () => {
-        setLoading(true);
-        setError(null);
+        setLoading(true)
+        setError(null)
         try {
-          const response = await fetch(`/api/bookings?email=${encodeURIComponent(email)}`);
-          if (!response.ok) throw new Error("Không thể tải dữ liệu đặt phòng");
-
-          const data = await response.json();
-          setNewBookings(data.new);
-          setOldBookings(data.old);
+          const response = await fetch(`/api/bookings?email=${encodeURIComponent(email)}`)
+          if (!response.ok) throw new Error("Không thể tải dữ liệu đặt phòng")
+          const data = await response.json()
+          setNewBookings(data.new)
+          setOldBookings(data.old)
         } catch (err) {
-          setError("Đã xảy ra lỗi khi tải lịch sử đặt phòng");
+          setError("Đã xảy ra lỗi khi tải lịch sử đặt phòng")
         } finally {
-          setLoading(false);
+          setLoading(false)
         }
-      };
-      fetchBookings();
+      }
+      fetchBookings()
     }
-  }, [email, open]);
+  }, [email, open])
 
   const formatCurrency = (amount: number) => {
     return (
@@ -112,35 +121,77 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(amount) + " VND"
-    );
-  };
+    )
+  }
 
-  const getPaymentStatusColor = (isPaid: boolean) => {
-    return isPaid
-      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-      : "bg-orange-100 text-orange-800 border-orange-200";
-  };
+  const getBookingStatusColor = (status: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan") => {
+    switch (status) {
+      case "Check_in":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "Check_out":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "YeuCauHuy":
+        return "bg-orange-100 text-orange-800 border-orange-200"
+      case "DaHuy":
+        return "bg-red-100 text-red-800 border-red-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const getBookingStatusText = (
+    status: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan"
+  ) => {
+    switch (status) {
+      case "Check_in":
+        return "Đã Check-in"
+      case "Check_out":
+        return "Đã Check-out"
+      case "YeuCauHuy":
+        return "Yêu cầu hủy"
+      case "DaHuy":
+        return "Đã hủy"
+      default:
+        return "Chờ Check-in"
+    }
+  }
+
+  const getBookingStatusIcon = (
+    status: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan"
+  ) => {
+    switch (status) {
+      case "Check_in":
+        return <UserCheck className="w-4 h-4 text-green-600" />
+      case "Check_out":
+        return <LogOut className="w-4 h-4 text-blue-600" />
+      case "YeuCauHuy":
+        return <Hourglass className="w-4 h-4 text-orange-600" />
+      case "DaHuy":
+        return <Ban className="w-4 h-4 text-red-600" />
+      default:
+        return <HelpCircle className="w-4 h-4 text-gray-500" />
+    }
+  }
 
   const calculateStayDuration = (checkIn: string, checkOut: string) => {
-    const startDate = new Date(checkIn);
-    const endDate = new Date(checkOut);
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-  // Thêm function để mapping phương thức thanh toán
+    const startDate = new Date(checkIn)
+    const endDate = new Date(checkOut)
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
+
   const formatPaymentMethod = (method: string) => {
     const paymentMethods: { [key: string]: string } = {
-      'TienMat': 'Tiền Mặt',
-      'ChuyenKhoan': 'Chuyển Khoản',
-      'Tiền mặt': 'Tiền Mặt',
-      'Chuyển khoản': 'Chuyển Khoản'
-    };
-    return paymentMethods[method] || method || "N/A";
-  };
+      TienMat: "Tiền Mặt",
+      ChuyenKhoan: "Chuyển Khoản",
+    }
+    return paymentMethods[method] || method || "N/A"
+  }
+
   const hasCheckInOut = (booking: Booking) => {
-    return booking.check_in && booking.check_out;
-  };
+    return booking.check_in && booking.check_out
+  }
 
   const renderTimeInfo = (booking: Booking) => {
     if (hasCheckInOut(booking)) {
@@ -169,7 +220,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             </div>
           </div>
         </div>
-      );
+      )
     } else {
       return (
         <div className="flex items-center space-x-3">
@@ -183,9 +234,9 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             </p>
           </div>
         </div>
-      );
+      )
     }
-  };
+  }
 
   const handleSubmitComment = async () => {
     try {
@@ -197,11 +248,11 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           maPhong: selectedBooking?.phong?.maPhong,
           noiDung: comment,
           danhGia: rating,
-          ttenKhachHang: displayName,
+          tenKhachHang: displayName,
         }),
-      });
+      })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (!response.ok) {
         toast.error("Lỗi", {
@@ -211,8 +262,8 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             background: "rgb(254, 226, 226)",
             border: "1px solid rgb(248, 113, 113)",
           },
-        });
-        return;
+        })
+        return
       }
 
       toast.success("Thành công", {
@@ -222,30 +273,145 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           background: "linear-gradient(to right, rgb(219, 234, 254), rgb(233, 213, 255))",
           border: "1px solid rgb(147, 197, 253)",
         },
-      });
+      })
 
-      setComment("");
-      setRating(0);
-      setSelectedBooking(null);
+      setComment("")
+      setRating(0)
+      setSelectedBooking(null)
     } catch (err) {
-      // Không cần toast.error ở đây nữa nếu API đã lo
-      console.error("Lỗi gửi bình luận:", err);
+      console.error("Lỗi gửi bình luận:", err)
     }
-  };
+  }
+
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return
+    if (!cancelReason.trim()) {
+      toast.error("Vui lòng nhập lý do hủy", {
+        duration: 5000,
+        style: {
+          background: "rgb(254, 226, 226)",
+          border: "1px solid rgb(248, 113, 113)",
+        },
+      })
+      return
+    }
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maDatPhong: selectedBooking.maDatPhong,
+          lyDoHuy: cancelReason,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        toast.success("Yêu cầu hủy đặt phòng đã được gửi!", {
+          duration: 5000,
+          style: {
+            background: "linear-gradient(to right, rgb(219, 234, 254), rgb(233, 213, 255))",
+            border: "1px solid rgb(147, 197, 253)",
+          },
+        })
+        setNewBookings(newBookings.map((b) =>
+          b.maDatPhong === selectedBooking.maDatPhong
+            ? { ...b, trangThai: "YeuCauHuy" }
+            : b
+        ))
+        setIsCancelDialogOpen(false)
+        setCancelReason("")
+        setSelectedBooking(null)
+      } else {
+        toast.error(result.message || "Lỗi khi gửi yêu cầu hủy đặt phòng!", {
+          duration: 5000,
+          style: {
+            background: "rgb(254, 226, 226)",
+            border: "1px solid rgb(248, 113, 113)",
+          },
+        })
+      }
+    } catch (error) {
+      console.error("Lỗi khi gửi yêu cầu hủy đặt phòng:", error)
+      toast.error("Lỗi hệ thống, vui lòng thử lại!", {
+        duration: 5000,
+        style: {
+          background: "rgb(254, 226, 226)",
+          border: "1px solid rgb(248, 113, 113)",
+        },
+      })
+    }
+  }
+
+  const handleRevertCancellation = async () => {
+    if (!selectedBooking) return
+
+    try {
+      const response = await fetch("/api/bookings/revert-cancellation", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maDatPhong: selectedBooking.maDatPhong,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        toast.success("Yêu cầu hủy đã được thu hồi!", {
+          duration: 5000,
+          style: {
+            background: "linear-gradient(to right, rgb(219, 234, 254), rgb(233, 213, 255))",
+            border: "1px solid rgb(147, 197, 253)",
+          },
+        })
+        setNewBookings(newBookings.map((b) =>
+          b.maDatPhong === selectedBooking.maDatPhong
+            ? { ...b, trangThai: "ChoXacNhan" }
+            : b
+        ))
+        setSelectedBooking(null)
+      } else {
+        toast.error(result.message || "Lỗi khi thu hồi yêu cầu hủy!", {
+          duration: 5000,
+          style: {
+            background: "rgb(254, 226, 226)",
+            border: "1px solid rgb(248, 113, 113)",
+          },
+        })
+      }
+    } catch (error) {
+      console.error("Lỗi khi thu hồi yêu cầu hủy:", error)
+      toast.error("Lỗi hệ thống, vui lòng thử lại!", {
+        duration: 5000,
+        style: {
+          background: "rgb(254, 226, 226)",
+          border: "1px solid rgb(248, 113, 113)",
+        },
+      })
+    }
+  }
 
   const renderBookingDetail = () => {
-    if (!selectedBooking) return null;
+    if (!selectedBooking) return null
 
-    const isPaid = selectedBooking.hoadon?.[0]?.trangThaiHD === "DaThanhToan";
-    const stayDuration = selectedBooking.check_in && selectedBooking.check_out
-      ? calculateStayDuration(selectedBooking.check_in, selectedBooking.check_out)
-      : 1;
-    const roomPrice = selectedBooking.phong?.gia ? selectedBooking.phong.gia * stayDuration : 0;
-    const serviceTotal = selectedBooking.dichvudatphong?.reduce((sum, service) => sum + service.thanhTien, 0) || 0;
-    const isCheckOut = selectedBooking.trangThai === "Check_out";
+    const stayDuration =
+      selectedBooking.check_in && selectedBooking.check_out
+        ? calculateStayDuration(selectedBooking.check_in, selectedBooking.check_out)
+        : 1
+    const roomPrice = selectedBooking.phong?.gia ? selectedBooking.phong.gia * stayDuration : 0
+    const serviceTotal = selectedBooking.dichvudatphong?.reduce((sum, service) => sum + service.thanhTien, 0) || 0
+    const isCheckOut = selectedBooking.trangThai === "Check_out"
+    const isCancellationRequested = selectedBooking.trangThai === "YeuCauHuy"
 
     return (
-      <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
+      <Dialog open={!!selectedBooking} onOpenChange={() => {
+        setSelectedBooking(null)
+        setIsCancelDialogOpen(false)
+        setCancelReason("")
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="bg-white pb-4 border-b border-gray-100">
             <DialogTitle className="text-2xl font-bold flex items-center space-x-2">
@@ -266,7 +432,11 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-1">
                     <img
-                      src={selectedBooking.phong.hinhAnh ? `/img/rooms/${selectedBooking.phong.hinhAnh}` : "/img/room/placeholder-room.jpg"}
+                      src={
+                        selectedBooking.phong.hinhAnh
+                          ? `/img/rooms/${selectedBooking.phong.hinhAnh}`
+                          : "/img/room/placeholder-room.jpg"
+                      }
                       alt={selectedBooking.phong.tenPhong || "Phòng"}
                       className="w-full h-48 object-cover rounded-lg"
                     />
@@ -274,7 +444,9 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                   <div className="lg:col-span-2 space-y-4">
                     <div>
                       <h4 className="text-lg font-bold text-gray-900">{selectedBooking.phong.tenPhong || "N/A"}</h4>
-                      <p className="text-blue-600 font-semibold">{selectedBooking.phong.loaiphong?.tenLoaiPhong || "N/A"}</p>
+                      <p className="text-blue-600 font-semibold">
+                        {selectedBooking.phong.loaiphong?.tenLoaiPhong || "N/A"}
+                      </p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -345,7 +517,10 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                 </h3>
                 <div className="space-y-3">
                   {selectedBooking.dichvudatphong.map((service, index) => (
-                    <div key={service.ma || index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div
+                      key={service.ma || index}
+                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                    >
                       <div>
                         <p className="font-semibold">{service.tenDichVuLucDat || "N/A"}</p>
                         <p className="text-sm text-gray-600">
@@ -358,9 +533,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                   <div className="flex justify-between p-3 items-center bg-gray-100 rounded-lg mt-4">
                     <div>
                       <p className="font-semibold">Tổng các dịch vụ</p>
-                      <p className="text-sm text-gray-600">
-                        (Gồm {selectedBooking.dichvudatphong.length} dịch vụ)
-                      </p>
+                      <p className="text-sm text-gray-600">(Gồm {selectedBooking.dichvudatphong.length} dịch vụ)</p>
                     </div>
                     <p className="font-bold text-orange-600">{formatCurrency(serviceTotal)}</p>
                   </div>
@@ -385,6 +558,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                     <span className="font-semibold">{formatCurrency(serviceTotal)}</span>
                   </div>
                 )}
+
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold">Tổng cộng</span>
@@ -395,16 +569,88 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-gray-600">Phương thức thanh toán</span>
-                  <span className="font-semibold">{formatPaymentMethod(selectedBooking.hoadon[0]?.phuongThucThanhToan || "N/A")}</span>
+                  <span className="font-semibold">
+                    {formatPaymentMethod(selectedBooking.hoadon[0]?.phuongThucThanhToan || "N/A")}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Trạng thái thanh toán</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPaymentStatusColor(isPaid)}`}>
-                    {isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                  <span className="text-gray-600">Trạng thái hóa đơn</span>
+                  <span className={`font-semibold ${selectedBooking.hoadon[0]?.trangThaiHD === 'DaThanhToan' ? 'text-green-600' : 'text-red-600'}`}>
+                    {selectedBooking.hoadon[0]?.trangThaiHD === 'DaThanhToan' ? 'Đã thanh toán' : selectedBooking.hoadon[0]?.trangThaiHD === 'ChuaThanhToan' ? 'Chưa thanh toán' : 'Không có thông tin'}
                   </span>
                 </div>
               </div>
             </div>
+
+            {/* Cancel/Revert Cancellation Section */}
+            {(selectedBooking.trangThai === "ChoXacNhan" || selectedBooking.trangThai === "YeuCauHuy") && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                {isCancellationRequested ? (
+                  <Button
+                    variant="outline"
+                    onClick={handleRevertCancellation}
+                    className="w-full flex items-center gap-2 border-blue-500 text-blue-500 hover:bg-blue-50"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    Thu hồi yêu cầu hủy
+                  </Button>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setIsCancelDialogOpen(true)}
+                    className="w-full flex items-center gap-2"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    Yêu cầu hủy đặt phòng
+                  </Button>
+                )}
+
+                <Dialog open={isCancelDialogOpen} onOpenChange={(open) => {
+                  setIsCancelDialogOpen(open)
+                  if (!open) setCancelReason("")
+                }}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <XCircle className="w-5 h-5 text-red-600" />
+                        Yêu cầu hủy đặt phòng
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="cancelReason">Lý do hủy *</Label>
+                        <Textarea
+                          id="cancelReason"
+                          value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          placeholder="Vui lòng nhập lý do hủy đặt phòng..."
+                          className="mt-1"
+                          required
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsCancelDialogOpen(false)
+                            setCancelReason("")
+                          }}
+                        >
+                          Hủy
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleCancelBooking}
+                          disabled={!cancelReason.trim()}
+                        >
+                          Gửi yêu cầu hủy
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
 
             {/* Comment Section (only for Check_out status) */}
             {isCheckOut && (
@@ -441,14 +687,15 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           </div>
         </DialogContent>
       </Dialog>
-    );
-  };
+    )
+  }
 
   const renderBookingItem = (booking: Booking) => {
-    const isPaid = booking.hoadon?.[0]?.trangThaiHD === "DaThanhToan";
-
     return (
-      <div key={booking.maDatPhong} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 group">
+      <div
+        key={booking.maDatPhong}
+        className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 group"
+      >
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center space-x-3">
@@ -461,8 +708,11 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             </div>
           </div>
           <div className="flex space-x-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPaymentStatusColor(isPaid)}`}>
-              {isPaid ? "Đã Thanh Toán" : "Chưa Thanh Toán"}
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getBookingStatusColor(booking.trangThai)}`}
+            >
+              {getBookingStatusIcon(booking.trangThai)}
+              {getBookingStatusText(booking.trangThai)}
             </span>
           </div>
         </div>
@@ -481,9 +731,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
         )}
 
         {/* Time Info */}
-        <div className="mb-4">
-          {renderTimeInfo(booking)}
-        </div>
+        <div className="mb-4">{renderTimeInfo(booking)}</div>
 
         {/* Price and Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
@@ -504,12 +752,11 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           </Button>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <>
-     
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-4 border-b border-gray-100">
@@ -551,9 +798,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                 <TabsContent value="new" className="flex-1">
                   <div className="space-y-1 max-h-[calc(90vh-250px)] overflow-y-auto pr-2">
                     {newBookings.length > 0 ? (
-                      <div className="grid gap-4">
-                        {newBookings.map(renderBookingItem)}
-                      </div>
+                      <div className="grid gap-4">{newBookings.map(renderBookingItem)}</div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-16">
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -569,9 +814,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                 <TabsContent value="old" className="flex-1 overflow-auto">
                   <div className="space-y-1 max-h-[calc(90vh-250px)] overflow-y-auto pr-2">
                     {oldBookings.length > 0 ? (
-                      <div className="grid gap-4">
-                        {oldBookings.map(renderBookingItem)}
-                      </div>
+                      <div className="grid gap-4">{oldBookings.map(renderBookingItem)}</div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-16">
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -592,7 +835,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
       {/* Booking Detail Modal */}
       {renderBookingDetail()}
     </>
-  );
-};
+  )
+}
 
-export default BookingManagement;
+export default BookingManagement

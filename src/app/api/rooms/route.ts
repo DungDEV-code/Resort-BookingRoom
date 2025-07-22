@@ -12,17 +12,7 @@ const TINH_TRANG_MAP: Record<string, string> = {
 export async function GET() {
   try {
     // Get all rooms
-    const rooms = await prisma.phong.findMany({
-      select: {
-        maPhong: true,
-        maLoaiPhong: true,
-        moTa: true,
-        tinhTrang: true,
-        gia: true,
-        hinhAnh: true,
-        tenPhong: true,
-      },
-    });
+    const rooms = await prisma.phong.findMany();
 
     // Get all room types
     const roomTypes = await prisma.loaiphong.findMany({

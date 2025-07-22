@@ -10,7 +10,7 @@ import { Trash2, Users, Bed, DollarSign, Home, Plus, Image as ImageIcon, CheckCi
 
 import Image from "next/image"
 import { toast } from "sonner"
-import { RoomTypeDialog } from '../compoents/RoomTypeDialog'
+import { RoomTypeDialog } from '../components/RoomTypeDialog'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 

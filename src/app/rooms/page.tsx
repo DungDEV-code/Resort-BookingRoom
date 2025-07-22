@@ -81,7 +81,15 @@ interface FilterState {
   tienNghi: string[]
   sortBy: string
 }
-
+interface Voucher {
+  maVoucher: string;
+  tenVoucher: string;
+  phanTramGiam: number;
+  dieuKienApDung: number | null;
+  ngayBatDau: string;
+  ngayKetThuc: string;
+  trangThai: string;
+}
 interface BookingForm {
   tenKhachHang: string
   ngaySinh: string
@@ -92,6 +100,8 @@ interface BookingForm {
   checkOut: string
   phuongThucThanhToan: string
   dichVuDat: BookedService[]
+  maVoucher?: string; // Add voucher field
+
 }
 
 interface Customer {
@@ -112,6 +122,28 @@ export default function RoomsPage() {
   const [bookingStep, setBookingStep] = useState(1)
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false); //
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [selectedVoucher, setSelectedVoucher] = useState<string>("");
+  const [validVouchers, setValidVouchers] = useState<Voucher[]>([]);
+  useEffect(() => {
+    // Gọi API để lấy danh sách voucher
+    fetch("/api/vouchers")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setVouchers(data); // Cập nhật danh sách nếu dữ liệu hợp lệ
+        } else {
+          console.error("Dữ liệu voucher trả về không đúng định dạng:", data);
+          setVouchers([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Lỗi khi gọi API lấy danh sách voucher:", err);
+        setVouchers([]);
+        toast.error("Không thể tải danh sách voucher. Vui lòng thử lại!");
+      });
+  }, []);
+
   useEffect(() => {
     const maPhong = searchParams.get("maPhong");
     console.log("Selected maPhong:", maPhong);
@@ -149,6 +181,7 @@ export default function RoomsPage() {
       setBookedDates([]);
     }
   }, [searchParams, rooms]);
+  //Dùng để chọn ngày tối thiểu làm ngày trả phòng
   function addDays(date: Date, days: number): Date {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
@@ -292,7 +325,32 @@ export default function RoomsPage() {
         setRooms([])
       })
   }, [])
+ 
 
+  useEffect(() => {
+    if (bookingStep === 3 && bookingForm.checkIn && bookingForm.checkOut && selectedRoom) {
+      const checkIn = new Date(bookingForm.checkIn);
+      const checkOut = new Date(bookingForm.checkOut);
+      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+      const roomTotal = nights > 0 ? nights * Number(selectedRoom.gia) : 0;
+      const servicesTotal = bookingForm.dichVuDat.reduce(
+        (total, service) => total + Number(service.thanhTien),
+        0
+      );
+      const totalBill = roomTotal + servicesTotal;
+
+      // Lọc các voucher thỏa mãn điều kiện áp dụng
+      const filteredVouchers = vouchers.filter(
+        (voucher) => !voucher.dieuKienApDung || totalBill >= Number(voucher.dieuKienApDung)
+      );
+      setValidVouchers(filteredVouchers);
+
+      // Nếu voucher đang chọn không còn hợp lệ, reset selectedVoucher
+      if (selectedVoucher && !filteredVouchers.some((v) => v.maVoucher === selectedVoucher)) {
+        setSelectedVoucher("");
+      }
+    }
+  }, [bookingStep, bookingForm.checkIn, bookingForm.checkOut, bookingForm.dichVuDat, selectedRoom, vouchers, selectedVoucher]);
   useEffect(() => {
     fetch("/api/services")
       .then((res) => res.json())
@@ -481,15 +539,21 @@ export default function RoomsPage() {
     const checkOut = new Date(bookingForm.checkOut);
     const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
-    const roomTotal =
-      nights > 0 ? nights * Number(selectedRoom.gia) : 0;
-
+    let roomTotal = nights > 0 ? nights * Number(selectedRoom.gia) : 0;
     const servicesTotal = bookingForm.dichVuDat.reduce(
       (total, service) => total + Number(service.thanhTien),
       0
     );
 
-    return roomTotal + servicesTotal;
+    let voucherDiscount = 0;
+    if (selectedVoucher) {
+      const voucher = vouchers.find((v) => v.maVoucher === selectedVoucher);
+      if (voucher && (!voucher.dieuKienApDung || roomTotal >= Number(voucher.dieuKienApDung))) {
+        voucherDiscount = (voucher.phanTramGiam / 100) * roomTotal;
+      }
+    }
+
+    return roomTotal + servicesTotal - voucherDiscount;
   };
 
   const addService = (service: Service) => {
@@ -587,6 +651,7 @@ export default function RoomsPage() {
           email: bookingForm.email,
           checkIn: bookingForm.checkIn,
           checkOut: bookingForm.checkOut,
+          maVoucher: selectedVoucher || undefined,
           phuongThucThanhToan: bookingForm.phuongThucThanhToan,
           dichVuDat: bookingForm.dichVuDat,
           tongTien: calculateTotalPrice(),
@@ -633,11 +698,6 @@ export default function RoomsPage() {
       setIsSubmitting(false);
     }
   };
-  const getTomorrowDate = () => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return tomorrow.toISOString().split("T")[0]
-  }
 
 
 
@@ -647,9 +707,9 @@ export default function RoomsPage() {
       <main className="flex-1 bg-gray-50">
         <section className="bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 text-gray-800 py-8 md:py-16 border-b border-sky-200">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-sky-700 bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8 leading-normal text-sky-700 bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
               Danh Sách Phòng
-            </h1>
+            </h1>x
             <p className="text-sm md:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto">
               Tìm phòng phù hợp với nhu cầu của bạn - Trải nghiệm nghỉ dưỡng tuyệt vời
             </p>
@@ -1054,6 +1114,7 @@ export default function RoomsPage() {
                         className="mt-1"
                         disabled={!!customerData?.maUser}
                       />
+
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -1257,6 +1318,7 @@ export default function RoomsPage() {
                         </div>
                       </RadioGroup>
                     </div>
+
                   </div>
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800">Chi tiết thanh toán</h3>
@@ -1269,7 +1331,7 @@ export default function RoomsPage() {
                               <span className="font-medium">
                                 {Math.ceil(
                                   (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
-                                  (1000 * 60 * 60 * 24),
+                                  (1000 * 60 * 60 * 24)
                                 )}{" "}
                                 đêm
                               </span>
@@ -1280,10 +1342,9 @@ export default function RoomsPage() {
                                 {selectedRoom &&
                                   formatPrice(
                                     Math.ceil(
-                                      (new Date(bookingForm.checkOut).getTime() -
-                                        new Date(bookingForm.checkIn).getTime()) /
-                                      (1000 * 60 * 60 * 24),
-                                    ) * selectedRoom.gia,
+                                      (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
+                                      (1000 * 60 * 60 * 24)
+                                    ) * selectedRoom.gia
                                   )}
                               </span>
                             </div>
@@ -1294,14 +1355,47 @@ export default function RoomsPage() {
                             <span>Dịch vụ:</span>
                             <span className="font-medium">
                               {formatPrice(
-                                bookingForm.dichVuDat.reduce(
-                                  (total, service) => total + Number(service.thanhTien),
-                                  0
-                                )
+                                bookingForm.dichVuDat.reduce((total, service) => total + Number(service.thanhTien), 0)
                               )}
                             </span>
                           </div>
                         )}
+                        <div>
+                          <Label htmlFor="maVoucher">Mã Voucher</Label>
+                          <select
+                            id="maVoucher"
+                            value={selectedVoucher}
+                            onChange={(e) => setSelectedVoucher(e.target.value)}
+                            className="mt-1 w-full p-2 border border-gray-200 rounded-xl text-sm focus:border-emerald-500 focus:ring-emerald-500"
+                          >
+                            <option value="">Không sử dụng voucher</option>
+                            {validVouchers.map((voucher) => (
+                              <option key={voucher.maVoucher} value={voucher.maVoucher}>
+                                {voucher.tenVoucher} ({voucher.phanTramGiam}% off)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {selectedVoucher && (() => {
+                          const voucher = vouchers.find((v) => v.maVoucher === selectedVoucher);
+                          const soNgay = bookingForm.checkIn && bookingForm.checkOut
+                            ? Math.ceil(
+                              (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                            )
+                            : 0;
+
+                          const tienPhong = selectedRoom ? selectedRoom.gia * soNgay : 0;
+                          const giamGia = voucher ? (voucher.phanTramGiam / 100) * tienPhong : 0;
+
+                          return voucher ? (
+                            <div className="flex justify-between text-emerald-600">
+                              <span>Voucher ({voucher.tenVoucher}):</span>
+                              <span className="font-medium">-{formatPrice(giamGia)}</span>
+                            </div>
+                          ) : null;
+                        })()}
+
                         <Separator />
                         <div className="flex justify-between text-lg font-bold text-emerald-700">
                           <span>Tổng cộng:</span>

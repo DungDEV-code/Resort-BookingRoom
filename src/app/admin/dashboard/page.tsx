@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { RoomStatsCard } from "../compoents/room-stats-card"
-import { RevenueStatsCard } from "../compoents/revenue-stats-card"
-import { CustomerStatsCard } from "../compoents/customer-stats-card"
-import { TopServiceCard } from "../compoents/top-service-card"
-import { BookingStatsCard } from "../compoents/booking-stats-card"
-import { RevenueChart } from "../compoents/revenue-chart"
-import { PopularServices } from "../compoents/popular-services"
+import { RoomStatsCard } from "../components/room-stats-card"
+import { RevenueStatsCard } from "../components/revenue-stats-card"
+import { CustomerStatsCard } from "../components/customer-stats-card"
+import { TopServiceCard } from "../components/top-service-card"
+import { BookingStatsCard } from "../components/booking-stats-card"
+import { RevenueChart } from "../components/revenue-chart"
+import { PopularServices } from "../components/popular-services"
 
 export default function AdminPage() {
   const [chartData, setChartData] = useState<any[]>([])

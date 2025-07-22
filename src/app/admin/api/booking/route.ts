@@ -1,32 +1,32 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { type NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "7")
-    const search = searchParams.get("search") || ""
+    const { searchParams } = new URL(req.url);
+    const page = Number.parseInt(searchParams.get("page") || "1");
+    const limit = Number.parseInt(searchParams.get("limit") || "7");
+    const search = searchParams.get("search") || "";
 
-    const skip = (page - 1) * limit
+    const skip = (page - 1) * limit;
 
-    // Tạo điều kiện tìm kiếm
+    // Create search condition
     const whereCondition = search
       ? {
           OR: [
-            { maDatPhong: { contains: search, mode: "insensitive" as const } },
-            { khachhang: { tenKhachHang: { contains: search, mode: "insensitive" as const } } },
-            { phong: { tenPhong: { contains: search, mode: "insensitive" as const } } },
+            { maDatPhong: { contains: search } }, // Remove mode: "insensitive"
+            { khachhang: { tenKhachHang: { contains: search } } },
+            { phong: { tenPhong: { contains: search } } },
           ],
         }
-      : {}
+      : {};
 
-    // Lấy tổng số bản ghi
+    // Get total bookings count
     const totalBookings = await prisma.datphong.count({
       where: whereCondition,
-    })
+    });
 
-    // Lấy danh sách đặt phòng với phân trang
+    // Get paginated bookings list
     const datphongList = await prisma.datphong.findMany({
       where: whereCondition,
       orderBy: {
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         check_in: true,
         check_out: true,
         thoiGianDat: true,
-        trangThai: true, // Thêm trường trạng thái nếu có
+        trangThai: true,
         khachhang: {
           select: {
             tenKhachHang: true,
@@ -51,9 +51,9 @@ export async function GET(req: NextRequest) {
       },
       skip,
       take: limit,
-    })
+    });
 
-    const totalPages = Math.ceil(totalBookings / limit)
+    const totalPages = Math.ceil(totalBookings / limit);
 
     return NextResponse.json(
       {
@@ -66,10 +66,10 @@ export async function GET(req: NextRequest) {
           limit,
         },
       },
-      { status: 200 },
-    )
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("Lỗi lấy danh sách đặt phòng:", error)
-    return NextResponse.json({ success: false, message: "Lỗi server" }, { status: 500 })
+    console.error("Lỗi lấy danh sách đặt phòng:", error);
+    return NextResponse.json({ success: false, message: "Lỗi server" }, { status: 500 });
   }
 }

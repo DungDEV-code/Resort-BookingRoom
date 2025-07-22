@@ -82,6 +82,7 @@ async function createBookingFromMoMo(bookingData: any, transId: string) {
           maPhong,
           check_in: checkInDate,
           check_out: checkOutDate,
+          trangThai:'ChoXacNhan',
           tongTien: Number.parseFloat(tongTienDatPhong),
           thoiGianDat: new Date(),
         },

@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Trash2, DollarSign, Package, Plus, ImageIcon, CheckCircle, XCircle, Search, Activity, Pencil } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
-import { ServiceDialog } from "../compoents/ServicesDialog"
+import { ServiceDialog } from "../components/ServicesDialog"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 

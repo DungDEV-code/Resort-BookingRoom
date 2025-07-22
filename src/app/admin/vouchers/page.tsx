@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Trash2, Percent, Calendar, Gift, Plus, CheckCircle, XCircle, Pencil, Clock } from "lucide-react"
 import { toast } from "sonner"
-import { VoucherDialog } from "../compoents/VoucherDialog"
+import { VoucherDialog } from "../components/VoucherDialog"
 
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
@@ -76,11 +76,7 @@ function DeleteConfirmDialog({ open, onClose, onConfirm }: DeleteConfirmDialogPr
         </Dialog>
     )
 }
-function formatMoneyInText(text: string): string {
-    return text.replace(/\d{4,}/g, (match) => {
-        return parseInt(match).toLocaleString("vi-VN")
-    })
-}
+
 function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString("vi-VN", {
         day: "2-digit",

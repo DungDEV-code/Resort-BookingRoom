@@ -16,7 +16,10 @@ export async function GET(
 
   try {
     const bookings = await prisma.datphong.findMany({
-      where: { maPhong },
+      where: {
+        maPhong,
+        trangThai: { not: "DaHuy" }, // Loại bỏ các đơn đã hủy
+      },
       select: {
         check_in: true,
         check_out: true,

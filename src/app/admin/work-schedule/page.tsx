@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2, Calendar, User, Home, Plus, CheckCircle, XCircle, Pencil, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { WorkScheduleDialog } from "../compoents/WorkScheduleDialog";
+import { WorkScheduleDialog } from "../components/WorkScheduleDialog";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 

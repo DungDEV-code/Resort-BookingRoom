@@ -1,9 +1,9 @@
 "use client"
-
 import Image from "next/image"
 import { useState, useEffect, useRef, type JSX } from "react"
 import Header from "@/components/Header/Header"
 import RoomType from "@/components/Room/RoomType"
+
 import { Button } from "@/components/ui/button"
 import {
   Bed,
@@ -42,13 +42,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { RoomTypeProps } from "@/components/Room/RoomType"
 import Service, { type Services } from "@/components/Service/Service"
 import AnimatedSection from "@/components/ui/AnimatedSection"
+import ChatBot from "@/components/ChatBot/ChatBot"
 
 // Hàm xáo trộn mảng với kiểu dữ liệu rõ ràng
 function shuffleArray<T extends Services>(array: T[]): T[] {
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
   return shuffled
 }
@@ -251,13 +252,13 @@ export default function Home() {
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <button
-                className="group relative bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 
-                 text-white font-semibold text-xl py-6 px-12 rounded-xl shadow-2xl 
-                 hover:from-amber-600 hover:via-orange-600 hover:to-amber-600 
-                 hover:scale-105 hover:shadow-3xl 
-                 transition-all duration-500 
-                 flex items-center justify-center 
-                 w-full sm:w-auto overflow-hidden
+                className="group relative bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500
+                  text-white font-semibold text-xl py-6 px-12 rounded-xl shadow-2xl
+                  hover:from-amber-600 hover:via-orange-600 hover:to-amber-600
+                  hover:scale-105 hover:shadow-3xl
+                  transition-all duration-500
+                  flex items-center justify-center
+                  w-full sm:w-auto overflow-hidden
                  ring-2 ring-amber-400/40 hover:ring-amber-500/70"
               >
                 <Link href="/rooms" className="relative z-10 flex items-center gap-3">
@@ -265,9 +266,9 @@ export default function Home() {
                   <Sparkles className="h-6 w-6 transform transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
                 </Link>
                 <span
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent 
-                      translate-x-[-150%] group-hover:translate-x-[150%] 
-                      transition-transform duration-1000 ease-in-out pointer-events-none"
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent
+                       translate-x-[-150%] group-hover:translate-x-[150%]
+                       transition-transform duration-1000 ease-in-out pointer-events-none"
                 />
               </button>
             </div>
@@ -430,7 +431,6 @@ export default function Home() {
                 Hàng nghìn khách hàng đã trải nghiệm và chia sẻ những kỷ niệm tuyệt vời tại Paradise Resort
               </p>
             </div>
-
             <div className="relative">
               <Card className="max-w-4xl mx-auto bg-white/80 backdrop-blur-sm shadow-2xl border-0">
                 <CardContent className="p-8 md:p-12">
@@ -463,7 +463,6 @@ export default function Home() {
                   </div>
                 </CardContent>
               </Card>
-
               {/* Navigation buttons */}
               <div className="flex justify-center mt-8 gap-4">
                 <Button
@@ -485,14 +484,14 @@ export default function Home() {
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-
               {/* Dots indicator */}
               <div className="flex justify-center mt-6 gap-2">
                 {testimonials.map((_, index) => (
                   <button
                     key={index}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentTestimonial ? "bg-purple-500 scale-125" : "bg-purple-200 hover:bg-purple-300"
-                      }`}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      index === currentTestimonial ? "bg-purple-500 scale-125" : "bg-purple-200 hover:bg-purple-300"
+                    }`}
                     onClick={() => setCurrentTestimonial(index)}
                   />
                 ))}
@@ -511,7 +510,6 @@ export default function Home() {
                 Cùng ngắm nhìn những hình ảnh tuyệt đẹp về khu nghỉ dưỡng và các tiện ích cao cấp
               </p>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {galleryImages.map((image, index) => (
                 <div
@@ -551,7 +549,6 @@ export default function Home() {
                 Paradise Resort tự hào nhận được nhiều giải thưởng danh giá về chất lượng dịch vụ và cơ sở vật chất
               </p>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {awards.map((award, index) => (
                 <Card
@@ -587,7 +584,6 @@ export default function Home() {
               <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
                 Đăng ký để nhận thông tin về các gói ưu đãi đặc biệt, sự kiện và tin tức mới nhất từ Paradise Resort
               </p>
-
               <div className="max-w-md mx-auto">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Input
@@ -599,7 +595,6 @@ export default function Home() {
                 </div>
                 <p className="text-sm opacity-70 mt-4">Chúng tôi cam kết bảo mật thông tin cá nhân của bạn</p>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 text-center">
                 <div>
                   <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-full mb-4">
@@ -787,6 +782,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* ChatBot Component */}
+      <ChatBot />
     </div>
   )
 }

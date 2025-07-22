@@ -18,7 +18,7 @@ export interface Services {
 }
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
+  new Intl.NumberFormat("vi-VN").format(value) + " VND";
 
 export function Service({
   maDV,
