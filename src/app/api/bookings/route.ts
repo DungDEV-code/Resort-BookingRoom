@@ -214,7 +214,7 @@ function formatDateToString(date: Date | null): string {
 }
 
 function generateShortId() {
-  return crypto.randomBytes(8).toString("hex").toUpperCase();
+  return crypto.randomBytes(5).toString("hex").toUpperCase();
 }
 
 export async function POST(req: NextRequest) {

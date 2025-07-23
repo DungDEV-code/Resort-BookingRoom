@@ -325,7 +325,7 @@ export default function RoomsPage() {
         setRooms([])
       })
   }, [])
- 
+
 
   useEffect(() => {
     if (bookingStep === 3 && bookingForm.checkIn && bookingForm.checkOut && selectedRoom) {
@@ -518,19 +518,39 @@ export default function RoomsPage() {
     setBookingForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleBookNow = (room: Room) => {
+  const handleBookNow = async (room: Room) => {
     if (!user) {
-      // If user is not logged in, redirect to login page
       toast.warning("Vui lòng đăng nhập để đặt phòng!");
-      router.push("/auth"); // Adjust the path to your login page
+      router.push("/auth");
       return;
     }
 
-    // If user is logged in, proceed with booking
-    setSelectedRoom(room);
-    setBookingStep(1);
-    router.push(`/rooms?maPhong=${room.maPhong}`);
+    try {
+      // Gọi API để kiểm tra số lượt đặt chưa thanh toán
+      const response = await fetch(`/api/bookings/unpaid?email=${encodeURIComponent(user.email)}`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const unpaidCount = data.data;
+
+        if (unpaidCount >= 3) {
+          toast.error("Bạn đã có 3 lượt đặt chưa thanh toán. Vui lòng thanh toán trước khi đặt tiếp.");
+          return;
+        }
+
+        // Cho phép đặt phòng
+        setSelectedRoom(room);
+        setBookingStep(1);
+        router.push(`/rooms?maPhong=${room.maPhong}`);
+      } else {
+        toast.error("Không thể kiểm tra tình trạng đặt phòng. Vui lòng thử lại sau.");
+      }
+    } catch (error) {
+      console.error("Lỗi khi kiểm tra số lượt đặt chưa thanh toán:", error);
+      toast.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+    }
   };
+
 
   const calculateTotalPrice = () => {
     if (!selectedRoom || !bookingForm.checkIn || !bookingForm.checkOut) return 0;

@@ -44,6 +44,7 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [users, setUsers] = useState<RoleAdminUser[]>([])
+    const [existingEmployees, setExistingEmployees] = useState<Employee[]>([])
     const [formData, setFormData] = useState({
         maUser: employee?.maUser || "",
         tenNhanVien: employee?.tenNhanVien || "",
@@ -56,29 +57,45 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
         { value: "DangLam", label: "Đang Làm" },
         { value: "Nghi", label: "Nghỉ" },
     ]
-    // Fetch available roleadminuser records
+
+    // Fetch available roleadminuser records and existing employees
     useEffect(() => {
         if (open) {
-            const fetchUsers = async () => {
+            const fetchUsersAndEmployees = async () => {
                 try {
-                    const res = await fetch(`${BASE_URL}/admin/api/users`, {
+                    // Fetch users
+                    const userRes = await fetch(`${BASE_URL}/admin/api/users`, {
                         headers: { "Content-Type": "application/json" },
                     })
-                    if (!res.ok) throw new Error("Lỗi khi tải danh sách tài khoản")
-                    const data: RoleAdminUser[] = await res.json()
-                    // Filter for NhanVien or Admin roles
-                    setUsers(data.filter(user => user.role === "NhanVien" || user.role === "Admin"))
+                    if (!userRes.ok) throw new Error("Lỗi khi tải danh sách tài khoản")
+                    const userData: RoleAdminUser[] = await userRes.json()
+                    
+                    // Fetch existing employees
+                    const employeeRes = await fetch(`${BASE_URL}/admin/api/employees`, {
+                        headers: { "Content-Type": "application/json" },
+                    })
+                    if (!employeeRes.ok) throw new Error("Lỗi khi tải danh sách nhân viên")
+                    const employeeData: Employee[] = await employeeRes.json()
+                    setExistingEmployees(employeeData)
+
+                    // Filter users to exclude those already associated with employees
+                    const assignedUserEmails = employeeData
+                        .filter(emp => emp.maUser !== (mode === "edit" ? employee?.maUser : ""))
+                        .map(emp => emp.maUser)
+                    const availableUsers = userData
+                        .filter(user => (user.role === "NhanVien" || user.role === "Admin") && !assignedUserEmails.includes(user.email))
+                    setUsers(availableUsers)
                 } catch (error) {
-                    toast.error("Lỗi khi tải danh sách tài khoản", {
+                    toast.error("Lỗi khi tải dữ liệu", {
                         description: error instanceof Error ? error.message : "Lỗi khi kết nối tới server",
                         icon: <XCircle className="w-4 h-4 text-red-600" />,
                         duration: 5000,
                     })
                 }
             }
-            fetchUsers()
+            fetchUsersAndEmployees()
         }
-    }, [open])
+    }, [open, mode, employee?.maUser])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

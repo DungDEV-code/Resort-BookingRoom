@@ -1,3 +1,4 @@
+
 "use client"
 import type React from "react"
 import { useState, useEffect } from "react"
@@ -26,6 +27,7 @@ import {
   Ban,
   HelpCircle,
   RotateCcw,
+  AlertTriangle,
 } from "lucide-react"
 import { format } from "date-fns"
 import { vi } from "date-fns/locale"
@@ -139,9 +141,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     }
   }
 
-  const getBookingStatusText = (
-    status: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan"
-  ) => {
+  const getBookingStatusText = (status: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan") => {
     switch (status) {
       case "Check_in":
         return "Đã Check-in"
@@ -156,9 +156,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     }
   }
 
-  const getBookingStatusIcon = (
-    status: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan"
-  ) => {
+  const getBookingStatusIcon = (status: "Check_in" | "Check_out" | "YeuCauHuy" | "DaHuy" | "ChoXacNhan") => {
     switch (status) {
       case "Check_in":
         return <UserCheck className="w-4 h-4 text-green-600" />
@@ -181,12 +179,12 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     return diffDays
   }
 
-  const formatPaymentMethod = (method: string) => {
+  const formatPaymentMethod = (method: string | null) => {
     const paymentMethods: { [key: string]: string } = {
       TienMat: "Tiền Mặt",
       ChuyenKhoan: "Chuyển Khoản",
     }
-    return paymentMethods[method] || method || "N/A"
+    return paymentMethods[method || ""] || method || "Tiền Mặt"
   }
 
   const hasCheckInOut = (booking: Booking) => {
@@ -251,9 +249,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           tenKhachHang: displayName,
         }),
       })
-
       const result = await response.json()
-
       if (!response.ok) {
         toast.error("Lỗi", {
           description: result.message || "Đã xảy ra lỗi khi gửi bình luận",
@@ -265,7 +261,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
         })
         return
       }
-
       toast.success("Thành công", {
         description: result.message,
         duration: 5000,
@@ -274,7 +269,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           border: "1px solid rgb(147, 197, 253)",
         },
       })
-
       setComment("")
       setRating(0)
       setSelectedBooking(null)
@@ -295,7 +289,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
       })
       return
     }
-
     try {
       const response = await fetch("/api/bookings", {
         method: "DELETE",
@@ -305,9 +298,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           lyDoHuy: cancelReason,
         }),
       })
-
       const result = await response.json()
-
       if (response.ok && result.success) {
         toast.success("Yêu cầu hủy đặt phòng đã được gửi!", {
           duration: 5000,
@@ -316,11 +307,9 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             border: "1px solid rgb(147, 197, 253)",
           },
         })
-        setNewBookings(newBookings.map((b) =>
-          b.maDatPhong === selectedBooking.maDatPhong
-            ? { ...b, trangThai: "YeuCauHuy" }
-            : b
-        ))
+        setNewBookings(
+          newBookings.map((b) => (b.maDatPhong === selectedBooking.maDatPhong ? { ...b, trangThai: "YeuCauHuy" } : b)),
+        )
         setIsCancelDialogOpen(false)
         setCancelReason("")
         setSelectedBooking(null)
@@ -347,7 +336,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
 
   const handleRevertCancellation = async () => {
     if (!selectedBooking) return
-
     try {
       const response = await fetch("/api/bookings/revert-cancellation", {
         method: "PATCH",
@@ -356,9 +344,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           maDatPhong: selectedBooking.maDatPhong,
         }),
       })
-
       const result = await response.json()
-
       if (response.ok && result.success) {
         toast.success("Yêu cầu hủy đã được thu hồi!", {
           duration: 5000,
@@ -367,11 +353,9 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             border: "1px solid rgb(147, 197, 253)",
           },
         })
-        setNewBookings(newBookings.map((b) =>
-          b.maDatPhong === selectedBooking.maDatPhong
-            ? { ...b, trangThai: "ChoXacNhan" }
-            : b
-        ))
+        setNewBookings(
+          newBookings.map((b) => (b.maDatPhong === selectedBooking.maDatPhong ? { ...b, trangThai: "ChoXacNhan" } : b)),
+        )
         setSelectedBooking(null)
       } else {
         toast.error(result.message || "Lỗi khi thu hồi yêu cầu hủy!", {
@@ -394,42 +378,122 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
     }
   }
 
+  const getStatusConfig = (status: string | null, bookingStatus?: string) => {
+    if (bookingStatus === "DaHuy" && (!status || status === null)) {
+      return {
+        label: "Đã Hủy",
+        icon: Ban,
+        containerClass: "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/25",
+        iconBg: "bg-white/20",
+        iconColor: "text-white",
+        dotClass: "bg-white",
+      };
+    }
+    switch (status) {
+      case "DaThanhToan":
+        return {
+          label: "Đã Thanh Toán",
+          icon: CheckCircle,
+          containerClass: "bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-lg shadow-emerald-500/25",
+          iconBg: "bg-white/20",
+          iconColor: "text-white",
+          dotClass: "bg-white animate-pulse",
+        };
+      case "ChuaThanhToan":
+        return {
+          label: "Chưa Thanh Toán",
+          icon: AlertTriangle,
+          containerClass: "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/25",
+          iconBg: "bg-white/20",
+          iconColor: "text-white",
+          dotClass: "bg-white animate-bounce",
+        };
+      case "ChoXuLy":
+        return {
+          label: "Chờ Xử Lý",
+          icon: Hourglass,
+          containerClass: "bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/25",
+          iconBg: "bg-white/20",
+          iconColor: "text-white",
+          dotClass: "bg-white animate-pulse",
+        };
+      case "DaHoanTien":
+        return {
+          label: "Đã Hoàn Tiền",
+          icon: RotateCcw,
+          containerClass: "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/25",
+          iconBg: "bg-white/20",
+          iconColor: "text-white",
+          dotClass: "bg-white animate-pulse",
+        };
+      default:
+        return {
+          label: "Không có thông tin",
+          icon: HelpCircle,
+          containerClass: "bg-gradient-to-r from-slate-600 to-gray-600 text-white shadow-lg shadow-gray-500/25",
+          iconBg: "bg-white/20",
+          iconColor: "text-white",
+          dotClass: "bg-white",
+        };
+    }
+  };
+
   const renderBookingDetail = () => {
-    if (!selectedBooking) return null
+    if (!selectedBooking) return null;
+
+    const status = selectedBooking.hoadon?.[0]?.trangThaiHD;
+    const config = getStatusConfig(status, selectedBooking.trangThai);
+    const IconComponent = config.icon;
 
     const stayDuration =
       selectedBooking.check_in && selectedBooking.check_out
         ? calculateStayDuration(selectedBooking.check_in, selectedBooking.check_out)
-        : 1
-    const roomPrice = selectedBooking.phong?.gia ? selectedBooking.phong.gia * stayDuration : 0
-    const serviceTotal = selectedBooking.dichvudatphong?.reduce((sum, service) => sum + service.thanhTien, 0) || 0
-    const isCheckOut = selectedBooking.trangThai === "Check_out"
-    const isCancellationRequested = selectedBooking.trangThai === "YeuCauHuy"
+        : 1;
+    const roomPrice = selectedBooking.phong?.gia ? selectedBooking.phong.gia * stayDuration : 0;
+    const serviceTotal = selectedBooking.dichvudatphong?.reduce((sum, service) => sum + service.thanhTien, 0) || 0;
+    const isCheckOut = selectedBooking.trangThai === "Check_out";
+    const isCancellationRequested = selectedBooking.trangThai === "YeuCauHuy";
 
     return (
-      <Dialog open={!!selectedBooking} onOpenChange={() => {
-        setSelectedBooking(null)
-        setIsCancelDialogOpen(false)
-        setCancelReason("")
-      }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="bg-white pb-4 border-b border-gray-100">
-            <DialogTitle className="text-2xl font-bold flex items-center space-x-2">
-              <Receipt className="w-6 h-6 text-blue-600" />
-              <span>Chi tiết đặt phòng #{selectedBooking.maDatPhong}</span>
+      <Dialog
+        open={!!selectedBooking}
+        onOpenChange={() => {
+          setSelectedBooking(null);
+          setIsCancelDialogOpen(false);
+          setCancelReason("");
+        }}
+      >
+        <DialogContent className="w-[90vw] max-w-5xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader className="bg-white pb-3 border-b border-gray-100">
+            <DialogTitle className="text-xl font-bold flex items-center justify-between space-x-2">
+              <div className="flex items-center space-x-2">
+                <Receipt className="w-5 h-5 text-blue-600" />
+                <span>Chi tiết đặt phòng #{selectedBooking.maDatPhong}</span>
+              </div>
+              <div className="flex items-center justify-center p-4">
+                <div
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-default ${config.containerClass}`}
+                >
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${config.iconBg} backdrop-blur-sm`}>
+                    <IconComponent className={`w-3 h-3 ${config.iconColor}`} />
+                  </div>
+                  <span className="whitespace-nowrap">{config.label}</span>
+                  <div className={`w-2 h-2 rounded-full ${config.dotClass}`}></div>
+                </div>
+              </div>
+              <DialogClose />
             </DialogTitle>
-            <DialogClose />
           </DialogHeader>
 
-          <div className="space-y-6 pt-4">
+          <div className="space-y-4 pt-3">
             {/* Room Info */}
             {selectedBooking.phong && (
-              <div className="bg-white border border-gray-200 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                  <Home className="w-5 h-5 mr-2 text-green-600" />
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                  <Home className="w-4 h-4 mr-2 text-green-600" />
                   Thông tin phòng
                 </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <div className="lg:col-span-1">
                     <img
                       src={
@@ -438,69 +502,68 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                           : "/img/room/placeholder-room.jpg"
                       }
                       alt={selectedBooking.phong.tenPhong || "Phòng"}
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full h-32 object-cover rounded-lg"
                     />
                   </div>
-                  <div className="lg:col-span-2 space-y-4">
+                  <div className="lg:col-span-2 space-y-3">
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900">{selectedBooking.phong.tenPhong || "N/A"}</h4>
-                      <p className="text-blue-600 font-semibold">
+                      <h4 className="text-base font-bold text-gray-900">{selectedBooking.phong.tenPhong || "N/A"}</h4>
+                      <p className="text-blue-600 font-semibold text-sm">
                         {selectedBooking.phong.loaiphong?.tenLoaiPhong || "N/A"}
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-sm text-gray-500">Sức chứa</p>
-                        <p className="font-semibold">{selectedBooking.phong.loaiphong?.soNguoi || 0} người</p>
+                        <p className="text-xs text-gray-500">Sức chứa</p>
+                        <p className="font-semibold text-sm">{selectedBooking.phong.loaiphong?.soNguoi || 0} người</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Số giường</p>
-                        <p className="font-semibold">{selectedBooking.phong.loaiphong?.soGiuong || 0} giường</p>
+                        <p className="text-xs text-gray-500">Số giường</p>
+                        <p className="font-semibold text-sm">{selectedBooking.phong.loaiphong?.soGiuong || 0} giường</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Giá phòng/đêm</p>
-                        <p className="font-semibold text-green-600">{formatCurrency(selectedBooking.phong.gia || 0)}</p>
+                        <p className="text-xs text-gray-500">Giá phòng/đêm</p>
+                        <p className="font-semibold text-green-600 text-sm">{formatCurrency(selectedBooking.phong.gia || 0)}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Số đêm</p>
-                        <p className="font-semibold">{stayDuration} đêm</p>
+                        <p className="text-xs text-gray-500">Số đêm</p>
+                        <p className="font-semibold text-sm">{stayDuration} đêm</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
             {/* Booking Details */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-purple-600" />
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                <Calendar className="w-4 h-4 mr-2 text-purple-600" />
                 Chi tiết đặt phòng
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {selectedBooking.check_in && (
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <Calendar className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Check-in</p>
-                    <p className="font-bold text-green-600">
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <Calendar className="w-6 h-6 text-green-600 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500">Check-in</p>
+                    <p className="font-bold text-green-600 text-sm">
                       {format(new Date(selectedBooking.check_in), "dd/MM/yyyy", { locale: vi })}
                     </p>
                   </div>
                 )}
                 {selectedBooking.check_out && (
-                  <div className="text-center p-4 bg-red-50 rounded-lg">
-                    <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Check-out</p>
-                    <p className="font-bold text-red-600">
+                  <div className="text-center p-3 bg-red-50 rounded-lg">
+                    <Calendar className="w-6 h-6 text-red-600 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500">Check-out</p>
+                    <p className="font-bold text-red-600 text-sm">
                       {format(new Date(selectedBooking.check_out), "dd/MM/yyyy", { locale: vi })}
                     </p>
                   </div>
                 )}
                 {selectedBooking.thoiGianDat && (
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <Clock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Thời gian đặt</p>
-                    <p className="font-bold text-blue-600">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <Calendar className="w-6 h-6 text-blue-600 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500">Thời gian đặt</p>
+                    <p className="font-bold text-blue-600 text-sm">
                       {format(new Date(selectedBooking.thoiGianDat), "dd/MM/yyyy HH:mm", { locale: vi })}
                     </p>
                   </div>
@@ -510,113 +573,103 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
 
             {/* Services */}
             {selectedBooking.dichvudatphong && selectedBooking.dichvudatphong.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                  <Package className="w-5 h-5 mr-2 text-orange-600" />
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                  <Package className="w-4 h-4 mr-2 text-orange-600" />
                   Dịch vụ đã sử dụng
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {selectedBooking.dichvudatphong.map((service, index) => (
-                    <div
-                      key={service.ma || index}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                    >
+                    <div key={service.ma || index} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                       <div>
-                        <p className="font-semibold">{service.tenDichVuLucDat || "N/A"}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="font-semibold text-sm">{service.tenDichVuLucDat || "N/A"}</p>
+                        <p className="text-xs text-gray-600">
                           {service.soLuong || 0} x {formatCurrency(service.donGiaLucDat || 0)}
                         </p>
                       </div>
-                      <p className="font-bold text-orange-600">{formatCurrency(service.thanhTien || 0)}</p>
+                      <p className="font-bold text-orange-600 text-sm">{formatCurrency(service.thanhTien || 0)}</p>
                     </div>
                   ))}
-                  <div className="flex justify-between p-3 items-center bg-gray-100 rounded-lg mt-4">
+                  <div className="flex justify-between p-2 items-center bg-gray-100 rounded-lg mt-3">
                     <div>
-                      <p className="font-semibold">Tổng các dịch vụ</p>
-                      <p className="text-sm text-gray-600">(Gồm {selectedBooking.dichvudatphong.length} dịch vụ)</p>
+                      <p className="font-semibold text-sm">Tổng các dịch vụ</p>
+                      <p className="text-xs text-gray-600">(Gồm {selectedBooking.dichvudatphong.length} dịch vụ)</p>
                     </div>
-                    <p className="font-bold text-orange-600">{formatCurrency(serviceTotal)}</p>
+                    <p className="font-bold text-orange-600 text-sm">{formatCurrency(serviceTotal)}</p>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Payment Summary */}
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <CreditCard className="w-5 h-5 mr-2 text-green-600" />
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                <CreditCard className="w-4 h-4 mr-2 text-green-600" />
                 Tóm tắt thanh toán
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Tiền phòng ({stayDuration} đêm)</span>
-                  <span className="font-semibold">{formatCurrency(roomPrice)}</span>
+                  <span className="text-gray-600 text-sm">Tiền phòng ({stayDuration} đêm)</span>
+                  <span className="font-semibold text-sm">{formatCurrency(roomPrice)}</span>
                 </div>
                 {serviceTotal > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Tiền dịch vụ</span>
-                    <span className="font-semibold">{formatCurrency(serviceTotal)}</span>
+                    <span className="text-gray-600 text-sm">Tiền dịch vụ</span>
+                    <span className="font-semibold text-sm">{formatCurrency(serviceTotal)}</span>
                   </div>
                 )}
-
-                <div className="border-t pt-3">
+                <div className="border-t pt-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Tổng cộng</span>
-                    <span className="text-2xl font-bold text-green-600">
+                    <span className="text-base font-bold">Tổng cộng</span>
+                    <span className="text-xl font-bold text-green-600">
                       {formatCurrency(selectedBooking.hoadon?.[0]?.tongTien || selectedBooking.tongTien)}
                     </span>
                   </div>
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-gray-600">Phương thức thanh toán</span>
-                  <span className="font-semibold">
-                    {formatPaymentMethod(selectedBooking.hoadon[0]?.phuongThucThanhToan || "N/A")}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Trạng thái hóa đơn</span>
-                  <span className={`font-semibold ${selectedBooking.hoadon[0]?.trangThaiHD === 'DaThanhToan' ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedBooking.hoadon[0]?.trangThaiHD === 'DaThanhToan' ? 'Đã thanh toán' : selectedBooking.hoadon[0]?.trangThaiHD === 'ChuaThanhToan' ? 'Chưa thanh toán' : 'Không có thông tin'}
-                  </span>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600 text-sm">Phương thức thanh toán</span>
+                    <span className="font-semibold text-sm">{formatPaymentMethod(selectedBooking.hoadon?.[0]?.phuongThucThanhToan)}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Cancel/Revert Cancellation Section */}
             {(selectedBooking.trangThai === "ChoXacNhan" || selectedBooking.trangThai === "YeuCauHuy") && (
-              <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
                 {isCancellationRequested ? (
                   <Button
                     variant="outline"
                     onClick={handleRevertCancellation}
-                    className="w-full flex items-center gap-2 border-blue-500 text-blue-500 hover:bg-blue-50"
+                    className="w-full flex items-center gap-2 border-blue-500 text-blue-500 hover:bg-blue-50 bg-transparent text-sm"
                   >
-                    <RotateCcw className="w-5 h-5" />
+                    <RotateCcw className="w-4 h-4" />
                     Thu hồi yêu cầu hủy
                   </Button>
                 ) : (
                   <Button
                     variant="destructive"
                     onClick={() => setIsCancelDialogOpen(true)}
-                    className="w-full flex items-center gap-2"
+                    className="w-full flex items-center gap-2 text-sm"
                   >
-                    <XCircle className="w-5 h-5" />
+                    <XCircle className="w-4 h-4" />
                     Yêu cầu hủy đặt phòng
                   </Button>
                 )}
-
-                <Dialog open={isCancelDialogOpen} onOpenChange={(open) => {
-                  setIsCancelDialogOpen(open)
-                  if (!open) setCancelReason("")
-                }}>
+                <Dialog
+                  open={isCancelDialogOpen}
+                  onOpenChange={(open) => {
+                    setIsCancelDialogOpen(open);
+                    if (!open) setCancelReason("");
+                  }}
+                >
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <XCircle className="w-5 h-5 text-red-600" />
+                      <DialogTitle className="flex items-center gap-2 text-lg">
+                        <XCircle className="w-4 h-4 text-red-600" />
                         Yêu cầu hủy đặt phòng
                       </DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div>
                         <Label htmlFor="cancelReason">Lý do hủy *</Label>
                         <Textarea
@@ -624,7 +677,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                           value={cancelReason}
                           onChange={(e) => setCancelReason(e.target.value)}
                           placeholder="Vui lòng nhập lý do hủy đặt phòng..."
-                          className="mt-1"
+                          className="mt-1 text-sm"
                           required
                         />
                       </div>
@@ -632,9 +685,10 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setIsCancelDialogOpen(false)
-                            setCancelReason("")
+                            setIsCancelDialogOpen(false);
+                            setCancelReason("");
                           }}
+                          className="text-sm"
                         >
                           Hủy
                         </Button>
@@ -642,6 +696,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                           variant="destructive"
                           onClick={handleCancelBooking}
                           disabled={!cancelReason.trim()}
+                          className="text-sm"
                         >
                           Gửi yêu cầu hủy
                         </Button>
@@ -652,19 +707,19 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
               </div>
             )}
 
-            {/* Comment Section (only for Check_out status) */}
+            {/* Comment Section */}
             {isCheckOut && (
-              <div className="bg-white border border-gray-200 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2 text-yellow-600" />
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                  <MessageSquare className="w-4 h-4 mr-2 text-yellow-600" />
                   Gửi đánh giá của bạn
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     {[...Array(5)].map((_, index) => (
                       <StarIcon
                         key={index}
-                        className={`w-6 h-6 cursor-pointer ${index < rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                        className={`w-5 h-5 cursor-pointer ${index < rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
                         onClick={() => setRating(index + 1)}
                       />
                     ))}
@@ -673,11 +728,11 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                     placeholder="Viết đánh giá của bạn về phòng..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full p-2 border border-gray-300 rounded text-sm"
                   />
                   <Button
                     onClick={handleSubmitComment}
-                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
                   >
                     Gửi đánh giá
                   </Button>
@@ -687,8 +742,8 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           </div>
         </DialogContent>
       </Dialog>
-    )
-  }
+    );
+  };
 
   const renderBookingItem = (booking: Booking) => {
     return (
@@ -696,7 +751,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
         key={booking.maDatPhong}
         className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 group"
       >
-        {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -716,8 +770,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             </span>
           </div>
         </div>
-
-        {/* Room Info */}
         {booking.phong && (
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
@@ -729,11 +781,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             <p className="text-sm text-gray-600 ml-6">{booking.phong.loaiphong?.tenLoaiPhong || "N/A"}</p>
           </div>
         )}
-
-        {/* Time Info */}
         <div className="mb-4">{renderTimeInfo(booking)}</div>
-
-        {/* Price and Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex items-center space-x-2">
             <div>
@@ -765,7 +813,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
             </DialogTitle>
             <DialogClose />
           </DialogHeader>
-
           <div className="flex-1 overflow-hidden">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16">
@@ -794,7 +841,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                     <span>Lịch sử cũ ({oldBookings.length})</span>
                   </TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="new" className="flex-1">
                   <div className="space-y-1 max-h-[calc(90vh-250px)] overflow-y-auto pr-2">
                     {newBookings.length > 0 ? (
@@ -810,7 +856,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
                     )}
                   </div>
                 </TabsContent>
-
                 <TabsContent value="old" className="flex-1 overflow-auto">
                   <div className="space-y-1 max-h-[calc(90vh-250px)] overflow-y-auto pr-2">
                     {oldBookings.length > 0 ? (
@@ -831,8 +876,6 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Booking Detail Modal */}
       {renderBookingDetail()}
     </>
   )
