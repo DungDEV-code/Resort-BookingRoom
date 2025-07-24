@@ -32,7 +32,21 @@ export async function PUT(
             const hoaDon = currentBooking.hoadon;
 
             if (hoaDon?.trangThaiHD === 'DaThanhToan') {
-                // Đã thanh toán → cập nhật hoàn tiền
+                const today = new Date();
+                if (!currentBooking.check_in) {
+                    return NextResponse.json({ error: 'Không có ngày check-in' }, { status: 400 });
+                }
+                const checkInDate = new Date(currentBooking.check_in);
+
+                // Đặt cả hai mốc thời gian về 0h00 để chỉ so sánh ngày
+                today.setHours(0, 0, 0, 0);
+                checkInDate.setHours(0, 0, 0, 0);
+
+                const diffTime = checkInDate.getTime() - today.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                const trangThaiHD = diffDays <= 1 ? 'KhongHoanTien' : 'DaHoanTien';
+
                 await prisma.$transaction([
                     prisma.datphong.update({
                         where: { maDatPhong },
@@ -40,21 +54,22 @@ export async function PUT(
                     }),
                     prisma.hoadon.update({
                         where: { maHD: hoaDon.maHD },
-                        data: { trangThaiHD: 'DaHoanTien' },
+                        data: { trangThaiHD },
                     }),
                 ]);
-            } else {
+            }
+            else {
                 // Chưa thanh toán hoặc không có hóa đơn → xóa liên quan
                 await prisma.$transaction([
                     prisma.dichvudatphong.deleteMany({
                         where: { maDatPhong },
                     }),
-                    prisma.hoadon.deleteMany({
-                        where: { maDatPhong },
-                    }),
                     prisma.datphong.update({
                         where: { maDatPhong },
-                        data: { trangThai: 'DaHuy', lyDoHuy },
+                        data: {
+                            trangThai: 'DaHuy',
+                            lyDoHuy: lyDoHuy || undefined,
+                        },
                     }),
                 ]);
             }

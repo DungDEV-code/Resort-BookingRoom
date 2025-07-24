@@ -428,9 +428,9 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ open, onClose }) 
         };
       default:
         return {
-          label: "Không có thông tin",
-          icon: HelpCircle,
-          containerClass: "bg-gradient-to-r from-slate-600 to-gray-600 text-white shadow-lg shadow-gray-500/25",
+          label: "Không hoàn tiền",
+          icon: XCircle, // hoặc Ban
+          containerClass: "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/25",
           iconBg: "bg-white/20",
           iconColor: "text-white",
           dotClass: "bg-white",

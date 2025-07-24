@@ -211,6 +211,7 @@ enum hoadon_trangThaiHD {
   DaThanhToan   @map("Đã Thanh Toán")
   ChoXuLy       @map("Chờ Xử Lý")
   DaHoanTien    @map("Đã Hoàn Tiền")
+  KhongHoanTien @map("Không Hoàn Tiền")
 }
 enum dichvudatphong_trangThaiDV {
   ChuaHoanThanh @map("Chưa Hoàn Thành")

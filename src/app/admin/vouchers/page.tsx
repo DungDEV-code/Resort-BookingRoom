@@ -212,7 +212,26 @@ export default function VouchersPage() {
     }
 
     useEffect(() => {
-        fetchVouchers()
+        const updateAndFetch = async () => {
+            try {
+                // Gọi API để cập nhật trạng thái voucher
+                await fetch(`${BASE_URL}/admin/api/update-voucher-status`, {
+                    method: "POST",
+                })
+            } catch (err) {
+                console.error("Không thể cập nhật trạng thái voucher:", err)
+            } finally {
+                // Sau khi cập nhật xong thì fetch danh sách
+                await fetchVouchers()
+            }
+        }
+
+        updateAndFetch()
+
+        // Lặp lại mỗi 5 phút
+        const interval = setInterval(updateAndFetch, 5 * 60 * 1000)
+
+        return () => clearInterval(interval)
     }, [])
 
     if (loading) {
