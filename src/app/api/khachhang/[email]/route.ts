@@ -38,6 +38,7 @@ export async function GET(
             level: true,
             minSpending: true,
             description: true,
+            discountRate:true,
           },
         },
       },

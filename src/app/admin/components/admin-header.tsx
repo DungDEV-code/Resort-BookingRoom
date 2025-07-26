@@ -35,6 +35,7 @@ interface AdminHeaderProps {
 const titleMap: Record<string, string> = {
   "/admin/dashboard": "Dashboard",
   "/admin/employees": "Quản lý nhân viên",
+  "/admin/customers": "Quản lý khách hàng",
   "/admin/work-schedule": "Quản lý lịch làm",
   "/admin/rooms": "Quản lý phòng",
   "/admin/services": "Quản lý dịch vụ",

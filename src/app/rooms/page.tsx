@@ -105,9 +105,11 @@ interface BookingForm {
 }
 
 interface Customer {
-  tenKhachHang: string
-  soDienThoai: string
-  maUser: string // Used as email
+  tenKhachHang: string;
+  soDienThoai: string;
+  maUser: string; // Used as email
+  maMembership?: string; // Thêm mã hạng thành viên
+  discountRate?: number; // Thêm tỷ lệ giảm giá
 }
 
 export default function RoomsPage() {
@@ -375,24 +377,26 @@ export default function RoomsPage() {
         .then((res) => res.json())
         .then((data) => {
           if (data.error) {
-            console.error("Error fetching customer data:", data.error)
-            setCustomerData(null)
+            console.error("Error fetching customer data:", data.error);
+            setCustomerData(null);
           } else {
             setCustomerData({
               tenKhachHang: data.tenKhachHang || "",
               soDienThoai: data.soDienThoai || "",
               maUser: data.maUser || "",
-            })
+              maMembership: data.maMembership || "", // Thêm maMembership
+              discountRate: data.membership?.discountRate || 0, // Thêm discountRate từ membership
+            });
           }
         })
         .catch((err) => {
-          console.error("Error fetching customer data:", err)
-          setCustomerData(null)
-        })
+          console.error("Error fetching customer data:", err);
+          setCustomerData(null);
+        });
     } else {
-      setCustomerData(null)
+      setCustomerData(null);
     }
-  }, [user])
+  }, [user]);
 
   useEffect(() => {
     if (customerData) {
@@ -559,23 +563,35 @@ export default function RoomsPage() {
     const checkOut = new Date(bookingForm.checkOut);
     const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
+    // Tính tổng tiền phòng
     let roomTotal = nights > 0 ? nights * Number(selectedRoom.gia) : 0;
+
+    // Áp dụng giảm giá theo hạng thành viên
+    let membershipDiscount = 0;
+    const discountRate = customerData?.discountRate ?? 0; // Gán mặc định là 0 nếu undefined
+    if (discountRate > 0) {
+      membershipDiscount = (discountRate / 100) * roomTotal;
+    }
+    const roomTotalAfterMembership = roomTotal - membershipDiscount;
+
+    // Tính tổng tiền dịch vụ
     const servicesTotal = bookingForm.dichVuDat.reduce(
       (total, service) => total + Number(service.thanhTien),
       0
     );
 
+    // Áp dụng giảm giá voucher
     let voucherDiscount = 0;
     if (selectedVoucher) {
       const voucher = vouchers.find((v) => v.maVoucher === selectedVoucher);
-      if (voucher && (!voucher.dieuKienApDung || roomTotal >= Number(voucher.dieuKienApDung))) {
-        voucherDiscount = (voucher.phanTramGiam / 100) * roomTotal;
+      if (voucher && (!voucher.dieuKienApDung || roomTotalAfterMembership >= Number(voucher.dieuKienApDung))) {
+        voucherDiscount = (voucher.phanTramGiam / 100) * roomTotalAfterMembership;
       }
     }
 
-    return roomTotal + servicesTotal - voucherDiscount;
+    // Tổng tiền cuối cùng
+    return roomTotalAfterMembership + servicesTotal - voucherDiscount;
   };
-
   const addService = (service: Service) => {
     const existingService = bookingForm.dichVuDat.find((s) => s.maDichVu === service.maDV)
 
@@ -1344,7 +1360,7 @@ export default function RoomsPage() {
                     <h3 className="text-lg font-semibold text-gray-800">Chi tiết thanh toán</h3>
                     <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
                       <div className="space-y-3">
-                        {bookingForm.checkIn && bookingForm.checkOut && (
+                        {bookingForm.checkIn && bookingForm.checkOut && selectedRoom && (
                           <>
                             <div className="flex justify-between">
                               <span>Số đêm:</span>
@@ -1359,15 +1375,28 @@ export default function RoomsPage() {
                             <div className="flex justify-between">
                               <span>Giá phòng:</span>
                               <span className="font-medium">
-                                {selectedRoom &&
-                                  formatPrice(
-                                    Math.ceil(
-                                      (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
-                                      (1000 * 60 * 60 * 24)
-                                    ) * selectedRoom.gia
-                                  )}
+                                {formatPrice(
+                                  Math.ceil(
+                                    (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
+                                    (1000 * 60 * 60 * 24)
+                                  ) * selectedRoom.gia
+                                )}
                               </span>
                             </div>
+                            {customerData && (customerData.discountRate ?? 0) > 0 && (
+                              <div className="flex justify-between text-emerald-600">
+                                <span>Giảm giá hạng thành viên ({customerData.discountRate ?? 0}%):</span>
+                                <span className="font-medium">
+                                  -{formatPrice(
+                                    ((customerData.discountRate ?? 0) / 100) *
+                                    (Math.ceil(
+                                      (new Date(bookingForm.checkOut).getTime() - new Date(bookingForm.checkIn).getTime()) /
+                                      (1000 * 60 * 60 * 24)
+                                    ) * selectedRoom.gia)
+                                  )}
+                                </span>
+                              </div>
+                            )}
                           </>
                         )}
                         {bookingForm.dichVuDat.length > 0 && (
@@ -1404,9 +1433,10 @@ export default function RoomsPage() {
                               (1000 * 60 * 60 * 24)
                             )
                             : 0;
-
                           const tienPhong = selectedRoom ? selectedRoom.gia * soNgay : 0;
-                          const giamGia = voucher ? (voucher.phanTramGiam / 100) * tienPhong : 0;
+                          const tienPhongSauMembership =
+                            tienPhong - ((customerData?.discountRate ?? 0) / 100) * tienPhong;
+                          const giamGia = voucher ? (voucher.phanTramGiam / 100) * tienPhongSauMembership : 0;
 
                           return voucher ? (
                             <div className="flex justify-between text-emerald-600">
@@ -1415,7 +1445,6 @@ export default function RoomsPage() {
                             </div>
                           ) : null;
                         })()}
-
                         <Separator />
                         <div className="flex justify-between text-lg font-bold text-emerald-700">
                           <span>Tổng cộng:</span>
@@ -1425,7 +1454,7 @@ export default function RoomsPage() {
                     </div>
                     {bookingForm.dichVuDat.length > 0 && (
                       <div>
-                        <h4 className="font-medium text-gray-800 mb-2">Dịch vụ đã chọn:</h4>
+                        <h4 className="font-medium text-gray-600 mb-2">Dịch vụ đã chọn:</h4>
                         <div className="space-y-2">
                           {bookingForm.dichVuDat.map((service) => (
                             <div key={service.maDichVu} className="flex justify-between text-sm bg-white p-2 rounded">

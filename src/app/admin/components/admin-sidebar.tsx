@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarDays, Contact, Home, Hotel, Package, Settings, Users, Bed, BookOpen, Percent, X, ClipboardList, CreditCard, MessageSquare, MessagesSquare } from "lucide-react"
+import { CalendarDays, Contact, Home, Hotel, Package, Settings, Users, Bed, BookOpen, Percent, X, ClipboardList, CreditCard, MessageSquare, MessagesSquare, User2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,11 @@ const menuItems = [
     title: "Quản lý nhân viên",
     url: "/admin/employees",
     icon: Users,
+  },
+  {
+    title: "Quản lý khách hàng",
+    url: "/admin/customers",
+    icon: User2,
   },
   {
     title: "Quản lý lịch làm",

@@ -123,10 +123,13 @@ const InvoicesPage = () => {
                 label: "Đã hủy",
                 className: "bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-red-200",
             },
-              DaHoanTien: {
-              
+            DaHoanTien: {
                 className: "bg-gradient-to-r from-purple-100 to-violet-100 text-purple-700",
                 label: "Đã hoàn tiền",
+            },
+            KhongHoanTien: {
+                className: "bg-gradient-to-r from-blue-100 to-blue-300 text-blue-800",
+                label: "Không hoàn tiền",
             }
         }
 
@@ -157,7 +160,7 @@ const InvoicesPage = () => {
                 className: "bg-gradient-to-r from-purple-100 to-violet-100 text-purple-700",
                 label: "Chuyển khoản",
             },
-          
+
         }
 
         const config = methodConfig[method] || {
