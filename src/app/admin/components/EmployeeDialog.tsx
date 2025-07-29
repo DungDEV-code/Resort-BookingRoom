@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CheckCircle, XCircle } from "lucide-react"
 import { toast } from "sonner"
+import { nhanvien_chucVu, nhanvien_trangThaiLamViec } from "@/generated/prisma"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 
@@ -23,24 +24,31 @@ interface Employee {
     maUser: string
     tenNhanVien: string
     soDienThoai: string
-    trangThaiLamViec: "DangLam" | "Nghi"
+    trangThaiLamViec: nhanvien_trangThaiLamViec
     ngayVaoLam: string | Date
-    viTri: string
+    chucVu: nhanvien_chucVu
+    roleadminuser?: {
+        email: string
+        userName: string
+        trangThaiTk: string
+        role: string
+    }
 }
 
 interface RoleAdminUser {
     email: string
     userName: string
-    role: "NhanVien" | "Admin"
+    role: "NhanVien" | "Admin" | "KhachHang"
 }
 
 interface EmployeeDialogProps {
     mode: "create" | "edit"
     employee?: Employee
     children: React.ReactNode
+    onSuccess?: () => Promise<void>
 }
 
-export default function EmployeeDialog({ mode, employee, children }: EmployeeDialogProps) {
+export default function EmployeeDialog({ mode, employee, children, onSuccess }: EmployeeDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [users, setUsers] = useState<RoleAdminUser[]>([])
@@ -49,13 +57,24 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
         maUser: employee?.maUser || "",
         tenNhanVien: employee?.tenNhanVien || "",
         soDienThoai: employee?.soDienThoai || "",
-        viTri: employee?.viTri || "",
-        trangThaiLamViec: employee?.trangThaiLamViec || "DangLam",
-        ngayVaoLam: employee?.ngayVaoLam ? new Date(employee.ngayVaoLam).toISOString().split("T")[0] : "",
+        chucVu: employee?.chucVu || nhanvien_chucVu.DonDep,
+        trangThaiLamViec: employee?.trangThaiLamViec || nhanvien_trangThaiLamViec.DangLam,
+        ngayVaoLam: employee?.ngayVaoLam
+            ? new Date(employee.ngayVaoLam).toISOString().split("T")[0]
+            : new Date().toISOString().split("T")[0],
     })
+
+    const chucVuOptions = [
+        { value: nhanvien_chucVu.DonDep, label: "Nhân viên dọn dẹp" },
+        { value: nhanvien_chucVu.SuaChua, label: "Nhân viên sửa chữa" },
+        { value: nhanvien_chucVu.LeTan, label: "Lễ tân" },
+        { value: nhanvien_chucVu.BaoVe, label: "Bảo vệ" },
+        { value: nhanvien_chucVu.QuanLy, label: "Quản lý" },
+    ]
+
     const workStatusOptions = [
-        { value: "DangLam", label: "Đang Làm" },
-        { value: "Nghi", label: "Nghỉ" },
+        { value: nhanvien_trangThaiLamViec.DangLam, label: "Đang Làm" },
+        { value: nhanvien_trangThaiLamViec.Nghi, label: "Nghỉ" },
     ]
 
     // Fetch available roleadminuser records and existing employees
@@ -66,13 +85,15 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
                     // Fetch users
                     const userRes = await fetch(`${BASE_URL}/admin/api/users`, {
                         headers: { "Content-Type": "application/json" },
+                        cache: "no-store",
                     })
                     if (!userRes.ok) throw new Error("Lỗi khi tải danh sách tài khoản")
                     const userData: RoleAdminUser[] = await userRes.json()
-                    
+
                     // Fetch existing employees
                     const employeeRes = await fetch(`${BASE_URL}/admin/api/employees`, {
                         headers: { "Content-Type": "application/json" },
+                        cache: "no-store",
                     })
                     if (!employeeRes.ok) throw new Error("Lỗi khi tải danh sách nhân viên")
                     const employeeData: Employee[] = await employeeRes.json()
@@ -101,10 +122,10 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
         e.preventDefault()
         setLoading(true)
 
-        // Validate phone number
+        // Validate phone number (10 digits, starts with 0)
         const phoneRegex = /^0[1-9]\d{8}$/
         if (!phoneRegex.test(formData.soDienThoai)) {
-            toast.error("Số điện thoại không hợp lệ", {
+            toast.error("Số điện thoại không hợp lệ (phải có 10 số, bắt đầu bằng 0)", {
                 icon: <XCircle className="w-4 h-4 text-red-600" />,
                 duration: 5000,
             })
@@ -114,7 +135,17 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
 
         // Validate date format
         if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.ngayVaoLam)) {
-            toast.error("Định dạng ngày vào làm không hợp lệ", {
+            toast.error("Định dạng ngày vào làm không hợp lệ (YYYY-MM-DD)", {
+                icon: <XCircle className="w-4 h-4 text-red-600" />,
+                duration: 5000,
+            })
+            setLoading(false)
+            return
+        }
+
+        // Validate maUser
+        if (!formData.maUser) {
+            toast.error("Vui lòng chọn tài khoản", {
                 icon: <XCircle className="w-4 h-4 text-red-600" />,
                 duration: 5000,
             })
@@ -146,7 +177,9 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
             })
 
             setOpen(false)
-            window.location.reload()
+            if (onSuccess) {
+                await onSuccess() // Call onSuccess to refresh data
+            }
         } catch (error) {
             toast.error(`Lỗi khi ${mode === "create" ? "thêm" : "cập nhật"} nhân viên`, {
                 description: error instanceof Error ? error.message : "Lỗi khi kết nối tới server",
@@ -207,25 +240,35 @@ export default function EmployeeDialog({ mode, employee, children }: EmployeeDia
                                 id="soDienThoai"
                                 value={formData.soDienThoai}
                                 onChange={(e) => setFormData({ ...formData, soDienThoai: e.target.value })}
-                                placeholder="Nhập số điện thoại"
+                                placeholder="Nhập số điện thoại (10 số)"
                                 required
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="viTri">Vị trí</Label>
-                            <Input
-                                id="viTri"
-                                value={formData.viTri}
-                                onChange={(e) => setFormData({ ...formData, viTri: e.target.value })}
-                                placeholder="Nhập vị trí công việc"
-                                required
-                            />
+                            <Label htmlFor="chucVu">Chức vụ</Label>
+                            <Select
+                                value={formData.chucVu}
+                                onValueChange={(value: nhanvien_chucVu) =>
+                                    setFormData({ ...formData, chucVu: value })
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Chọn chức vụ" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {chucVuOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="trangThaiLamViec">Trạng thái làm việc</Label>
                             <Select
                                 value={formData.trangThaiLamViec}
-                                onValueChange={(value: "DangLam" | "Nghi") =>
+                                onValueChange={(value: nhanvien_trangThaiLamViec) =>
                                     setFormData({ ...formData, trangThaiLamViec: value })
                                 }
                             >

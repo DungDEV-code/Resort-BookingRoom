@@ -104,17 +104,27 @@ model khachhang {
 model lichlamviec {
   malichLamViec String                   @id @db.VarChar(20)
   maNhanVien    String                   @db.VarChar(20)
-  maPhong       String                   @db.VarChar(20)
+  
   ngayLam       DateTime                 @db.Date
 
   loaiCV        LoaiCongViec
   trangThaiCV   lichlamviec_trangThaiCV?
   nhanvien       nhanvien  @relation(fields: [maNhanVien], references: [maNhanVien])
-  phong          phong     @relation(fields: [maPhong], references: [maPhong])
+  chitietPhong   chitiet_lichlamviec[]   // ✅ Liên kết đến các phòng làm việc
   @@index([maNhanVien], map: "maNhanVien")
+  
+}
+model chitiet_lichlamviec {
+  id             String        @id @db.VarChar(20)
+  malichLamViec  String        @db.VarChar(20) // ✅ viết thường như trên
+  maPhong        String        @db.VarChar(20)
+
+  lichlamviec    lichlamviec   @relation(fields: [malichLamViec], references: [malichLamViec]) // ✅ sửa references
+  phong          phong         @relation(fields: [maPhong], references: [maPhong])
+
+  @@index([malichLamViec], map: "malichLamViec") // ✅
   @@index([maPhong], map: "maPhong")
 }
-
 model loaiphong {
   maLoaiPhong  String   @id @db.VarChar(20)
   tenLoaiPhong String   @db.VarChar(50)
@@ -151,7 +161,8 @@ model phong {
   tenPhong    String           @default("") @db.VarChar(50)
   loaiphong   loaiphong        @relation(fields: [maLoaiPhong], references: [maLoaiPhong]) // ✅ thêm dòng này
   datphong   datphong[] 
-  lichlamviec  lichlamviec[]
+ 
+  chitietPhong chitiet_lichlamviec[]
   @@index([maLoaiPhong], map: "maLoaiPhong")
 }
 

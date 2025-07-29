@@ -340,7 +340,7 @@ const BookingsPage = () => {
                     <div className="space-y-2">
                         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
                             <CalendarDays className="h-8 w-8 text-blue-600" />
-                            Quản Lý Đặt Phòng
+                            Quản Lý Đơn Đặt Phòng
                         </h1>
                         <p className="text-gray-600 text-lg">Quản lý và theo dõi tất cả các đặt phòng trong hệ thống</p>
                     </div>
@@ -354,7 +354,7 @@ const BookingsPage = () => {
                 </div>
 
                 {/* Thanh tìm kiếm */}
-                <div className="w-full md:w-80">
+                <div className="w-full md:w-[400px]">
                     <input
                         type="text"
                         placeholder="Tìm theo mã đặt phòng, tên khách hàng hoặc phòng"

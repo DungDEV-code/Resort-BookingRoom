@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2, Calendar, User, Home, Plus, CheckCircle, XCircle, Pencil, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, Calendar, User, Home, Plus, CheckCircle, XCircle, Pencil, Clock, Search } from "lucide-react";
 import { toast } from "sonner";
 import { WorkScheduleDialog } from "../components/WorkScheduleDialog";
+import { LoaiCongViec, lichlamviec_trangThaiCV, nhanvien_chucVu } from "@/generated/prisma";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -26,9 +28,10 @@ interface WorkSchedule {
   tenPhong: string;
   maNhanVien: string;
   tenNhanVien: string;
+  chucVu: nhanvien_chucVu;
   ngayLam: string;
-  loaiCV: "DonDep" | "SuaChua";
-  trangThaiCV: "ChuaHoanThanh" | "DaHoanThanh";
+  loaiCV: LoaiCongViec;
+  trangThaiCV: lichlamviec_trangThaiCV;
 }
 
 interface DeleteConfirmDialogProps {
@@ -54,7 +57,7 @@ function DeleteConfirmDialog({ open, onClose, onConfirm }: DeleteConfirmDialogPr
           <Button
             variant="destructive"
             onClick={onConfirm}
-            className="bg-gradient-to-r from-red-500 to-red-600 text-white"
+            className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
           >
             Xóa
           </Button>
@@ -73,16 +76,16 @@ function formatDate(dateString: string): string {
   });
 }
 
-function getJobTypeBadge(loaiCV: string) {
+function getJobTypeBadge(loaiCV: LoaiCongViec) {
   switch (loaiCV) {
-    case "DonDep":
+    case LoaiCongViec.DonDep:
       return (
         <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <Home className="w-3 h-3 mr-1" />
           Dọn dẹp
         </Badge>
       );
-    case "SuaChua":
+    case LoaiCongViec.SuaChua:
       return (
         <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
           <Clock className="w-3 h-3 mr-1" />
@@ -94,16 +97,16 @@ function getJobTypeBadge(loaiCV: string) {
   }
 }
 
-function getStatusBadge(trangThaiCV: string) {
+function getStatusBadge(trangThaiCV: lichlamviec_trangThaiCV) {
   switch (trangThaiCV) {
-    case "DaHoanThanh":
+    case lichlamviec_trangThaiCV.DaHoanThanh:
       return (
         <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
           <CheckCircle className="w-3 h-3 mr-1" />
           Hoàn thành
         </Badge>
       );
-    case "ChuaHoanThanh":
+    case lichlamviec_trangThaiCV.ChuaHoanThanh:
       return (
         <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white">
           <Clock className="w-3 h-3 mr-1" />
@@ -115,27 +118,41 @@ function getStatusBadge(trangThaiCV: string) {
   }
 }
 
+function getChucVuBadge(chucVu: nhanvien_chucVu) {
+  const config = {
+    [nhanvien_chucVu.DonDep]: "Nhân viên dọn dẹp",
+    [nhanvien_chucVu.SuaChua]: "Nhân viên sửa chữa",
+    [nhanvien_chucVu.LeTan]: "Lễ tân",
+    [nhanvien_chucVu.BaoVe]: "Bảo vệ",
+    [nhanvien_chucVu.QuanLy]: "Quản lý",
+  };
+
+  return (
+    <Badge variant="secondary" className="bg-purple-100 text-purple-600 hover:bg-purple-200">
+      {config[chucVu]}
+    </Badge>
+  );
+}
+
 export default function WorkSchedulePage() {
   const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchSchedules = async () => {
     try {
       setLoading(true);
       const res = await fetch(`${BASE_URL}/admin/api/schedule`, {
         cache: "no-store",
-        headers: {
-          "Cache-Control": "no-cache",
-        },
       });
 
       if (!res.ok) throw new Error("Lỗi khi tải lịch làm việc");
 
       const data: WorkSchedule[] = await res.json();
-      setSchedules(data); // Cập nhật state với dữ liệu lấy được
+      setSchedules(data);
     } catch (err: any) {
       setError(err.message);
       toast.error("Lỗi khi tải dữ liệu", {
@@ -147,6 +164,23 @@ export default function WorkSchedulePage() {
       setLoading(false);
     }
   };
+
+  // Filter schedules based on search term
+  const filteredSchedules = useMemo(() => {
+    if (!searchTerm.trim()) return schedules;
+    const searchLower = searchTerm.toLowerCase().trim();
+    return schedules.filter(
+      (schedule) =>
+        schedule.maLichLamViec.toLowerCase().includes(searchLower) ||
+        schedule.tenPhong.toLowerCase().includes(searchLower) ||
+        schedule.maPhong.toLowerCase().includes(searchLower) ||
+        schedule.tenNhanVien.toLowerCase().includes(searchLower) ||
+        schedule.maNhanVien.toLowerCase().includes(searchLower) ||
+        schedule.chucVu.toLowerCase().includes(searchLower) ||
+        formatDate(schedule.ngayLam).includes(searchLower) ||
+        schedule.loaiCV.toLowerCase().includes(searchLower)
+    );
+  }, [schedules, searchTerm]);
 
   const handleConfirmDelete = async () => {
     if (!confirmDeleteId) return;
@@ -181,8 +215,8 @@ export default function WorkSchedulePage() {
     }
   };
 
-  const handleScheduleUpdate = () => {
-    fetchSchedules();
+  const handleScheduleUpdate = async () => {
+    await fetchSchedules();
   };
 
   useEffect(() => {
@@ -191,16 +225,31 @@ export default function WorkSchedulePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600 text-lg">Đang tải...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 font-medium">Đang tải dữ liệu...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-600 text-lg">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-16 h-16 bg-gradient-to-r from-red-100 to-red-200 rounded-full flex items-center justify-center mx-auto">
+            <XCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900">Có lỗi xảy ra</h3>
+          <p className="text-gray-600">{error}</p>
+          <Button
+            onClick={fetchSchedules}
+            className="mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+          >
+            Thử lại
+          </Button>
+        </div>
       </div>
     );
   }
@@ -224,12 +273,38 @@ export default function WorkSchedulePage() {
           </WorkScheduleDialog>
         </div>
 
+        {/* Search Section */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                placeholder="Tìm kiếm theo mã lịch, phòng, nhân viên, chức vụ, ngày làm, loại công việc..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-3 text-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+              />
+            </div>
+            {searchTerm && (
+              <div className="mt-3 text-sm text-gray-600">
+                Tìm thấy <span className="font-semibold text-blue-600">{filteredSchedules.length}</span> kết quả cho "
+                {searchTerm}"
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Main Table */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
             <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-blue-600" />
               Danh sách lịch làm việc
+              {searchTerm && (
+                <Badge variant="secondary" className="ml-2">
+                  {filteredSchedules.length} kết quả
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -250,6 +325,7 @@ export default function WorkSchedulePage() {
                         Nhân viên
                       </div>
                     </TableHead>
+                    <TableHead className="font-semibold text-gray-700">Chức vụ</TableHead>
                     <TableHead className="font-semibold text-gray-700">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
@@ -262,7 +338,7 @@ export default function WorkSchedulePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {schedules.map((schedule: WorkSchedule, index: number) => (
+                  {filteredSchedules.map((schedule: WorkSchedule, index: number) => (
                     <TableRow
                       key={schedule.maLichLamViec}
                       className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 ${
@@ -284,6 +360,7 @@ export default function WorkSchedulePage() {
                           <div className="text-sm text-gray-500 font-mono">{schedule.maNhanVien}</div>
                         </div>
                       </TableCell>
+                      <TableCell>{getChucVuBadge(schedule.chucVu)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                           {formatDate(schedule.ngayLam)}
@@ -321,7 +398,8 @@ export default function WorkSchedulePage() {
           </CardContent>
         </Card>
 
-        {schedules.length === 0 && (
+        {/* Empty State */}
+        {filteredSchedules.length === 0 && !searchTerm && (
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardContent className="p-12 text-center">
               <div className="space-y-4">
@@ -331,11 +409,29 @@ export default function WorkSchedulePage() {
                 <h3 className="text-xl font-semibold text-gray-700">Chưa có lịch làm việc nào</h3>
                 <p className="text-gray-600">Hãy thêm lịch làm việc đầu tiên để bắt đầu quản lý</p>
                 <WorkScheduleDialog mode="create" onSuccess={handleScheduleUpdate}>
-                  <Button className="bg-blue-500 text-white hover:bg-blue-600 px-4 py-3 mt-4">
+                  <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-3 mt-4">
                     <Plus className="w-5 h-5 mr-2" />
                     Thêm lịch làm việc đầu tiên
                   </Button>
                 </WorkScheduleDialog>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* No Search Results */}
+        {filteredSchedules.length === 0 && searchTerm && (
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-12 text-center">
+              <div className="space-y-4">
+                <div className="w-16 h-16 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto">
+                  <Search className="w-8 h-8 text-gray-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700">Không tìm thấy kết quả</h3>
+                <p className="text-gray-600">Không có lịch làm việc nào phù hợp với từ khóa "{searchTerm}"</p>
+                <Button variant="outline" onClick={() => setSearchTerm("")} className="mt-4">
+                  Xóa bộ lọc
+                </Button>
               </div>
             </CardContent>
           </Card>

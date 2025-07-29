@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, UserCheck, UserX, Plus, XCircle, Search, Pencil, Phone, Calendar, Briefcase } from "lucide-react"
 import { toast } from "sonner"
-
 import { Input } from "@/components/ui/input"
 import EmployeeDialog from "../components/EmployeeDialog"
+import { nhanvien_chucVu, nhanvien_trangThaiLamViec } from "@/generated/prisma"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 
@@ -20,9 +20,15 @@ interface Employee {
   maUser: string
   tenNhanVien: string
   soDienThoai: string
-  trangThaiLamViec: "DangLam" | "Nghi"
+  trangThaiLamViec: nhanvien_trangThaiLamViec
   ngayVaoLam: string | Date
-  viTri: string
+  chucVu: nhanvien_chucVu
+  roleadminuser?: {
+    email: string
+    userName: string
+    trangThaiTk: string
+    role: string
+  }
 }
 
 interface Stats {
@@ -36,14 +42,14 @@ interface DataState {
   stats: Stats
 }
 
-function StatusBadge({ status }: { status: "DangLam" | "Nghi" }) {
+function StatusBadge({ status }: { status: nhanvien_trangThaiLamViec }) {
   const config = {
-    DangLam: {
+    [nhanvien_trangThaiLamViec.DangLam]: {
       label: "Đang làm",
       className: "bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-700 border-emerald-300",
       icon: <UserCheck className="w-3 h-3" />,
     },
-    Nghi: {
+    [nhanvien_trangThaiLamViec.Nghi]: {
       label: "Nghỉ việc",
       className: "bg-gradient-to-r from-red-100 to-red-200 text-red-700 border-red-300",
       icon: <UserX className="w-3 h-3" />,
@@ -58,6 +64,22 @@ function StatusBadge({ status }: { status: "DangLam" | "Nghi" }) {
     >
       {statusConfig.icon}
       {statusConfig.label}
+    </Badge>
+  )
+}
+
+function ChucVuBadge({ chucVu }: { chucVu: nhanvien_chucVu }) {
+  const config = {
+    [nhanvien_chucVu.DonDep]: "Nhân viên dọn dẹp",
+    [nhanvien_chucVu.SuaChua]: "Nhân viên sửa chữa",
+    [nhanvien_chucVu.LeTan]: "Lễ tân",
+    [nhanvien_chucVu.BaoVe]: "Bảo vệ",
+    [nhanvien_chucVu.QuanLy]: "Quản lý",
+  }
+
+  return (
+    <Badge variant="secondary" className="bg-blue-100 text-blue-600 hover:bg-blue-200">
+      {config[chucVu]}
     </Badge>
   )
 }
@@ -84,7 +106,8 @@ export default function EmployeeManagement() {
         employee.maNhanVien.toLowerCase().includes(searchLower) ||
         employee.tenNhanVien.toLowerCase().includes(searchLower) ||
         employee.soDienThoai.includes(searchLower) ||
-        employee.viTri.toLowerCase().includes(searchLower),
+        employee.chucVu.toLowerCase().includes(searchLower) ||
+        (employee.roleadminuser?.userName.toLowerCase().includes(searchLower) || false)
     )
   }, [data.employees, searchTerm])
 
@@ -93,17 +116,14 @@ export default function EmployeeManagement() {
       setLoading(true)
       const res = await fetch(`${BASE_URL}/admin/api/employees`, {
         cache: "no-store",
-        headers: {
-          "Cache-Control": "max-age=3600",
-        },
       })
       if (!res.ok) throw new Error("Lỗi khi tải danh sách nhân viên")
       const employees: Employee[] = await res.json()
 
       const stats: Stats = {
         totalEmployees: employees.length,
-        activeEmployees: employees.filter((emp) => emp.trangThaiLamViec === "DangLam").length,
-        inactiveEmployees: employees.filter((emp) => emp.trangThaiLamViec === "Nghi").length,
+        activeEmployees: employees.filter((emp) => emp.trangThaiLamViec === nhanvien_trangThaiLamViec.DangLam).length,
+        inactiveEmployees: employees.filter((emp) => emp.trangThaiLamViec === nhanvien_trangThaiLamViec.Nghi).length,
       }
 
       setData({ employees, stats })
@@ -165,7 +185,7 @@ export default function EmployeeManagement() {
             </h1>
             <p className="text-gray-600 text-lg">Quản lý và theo dõi thông tin nhân viên trong hệ thống</p>
           </div>
-          <EmployeeDialog mode="create">
+          <EmployeeDialog mode="create" onSuccess={fetchEmployees}>
             <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-3">
               <Plus className="w-5 h-5 mr-2" />
               Thêm nhân viên mới
@@ -216,7 +236,7 @@ export default function EmployeeManagement() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
-                placeholder="Tìm kiếm theo mã NV, tên, SĐT hoặc vị trí..."
+                placeholder="Tìm kiếm theo mã NV, tên, SĐT, chức vụ hoặc tên đăng nhập..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-3 text-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
@@ -260,7 +280,7 @@ export default function EmployeeManagement() {
                     <TableHead className="font-semibold text-gray-700">
                       <div className="flex items-center gap-1">
                         <Briefcase className="w-4 h-4" />
-                        Vị trí
+                        Chức vụ
                       </div>
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700">Trạng thái</TableHead>
@@ -285,9 +305,7 @@ export default function EmployeeManagement() {
                       <TableCell className="font-semibold text-gray-800">{employee.tenNhanVien}</TableCell>
                       <TableCell className="text-gray-600">{employee.soDienThoai}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-600 hover:bg-blue-200">
-                          {employee.viTri}
-                        </Badge>
+                        <ChucVuBadge chucVu={employee.chucVu} />
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={employee.trangThaiLamViec} />
@@ -297,7 +315,7 @@ export default function EmployeeManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-center">
-                          <EmployeeDialog mode="edit" employee={employee}>
+                          <EmployeeDialog mode="edit" employee={employee} onSuccess={fetchEmployees}>
                             <Button
                               size="sm"
                               className="bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-500 hover:to-sky-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
@@ -326,7 +344,7 @@ export default function EmployeeManagement() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-700">Chưa có nhân viên nào</h3>
                 <p className="text-gray-600">Hãy thêm nhân viên đầu tiên để bắt đầu quản lý</p>
-                <EmployeeDialog mode="create">
+                <EmployeeDialog mode="create" onSuccess={fetchEmployees}>
                   <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 mt-4">
                     <Plus className="w-5 h-5 mr-2" />
                     Thêm nhân viên đầu tiên

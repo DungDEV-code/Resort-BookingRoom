@@ -106,7 +106,7 @@ export default function Account({ open, onClose }: { open: boolean; onClose: () 
             gioiTinh: data.gioiTinh || "",
             diaChi: data.diaChi || "",
             soDienThoai: data.soDienThoai || "",
-            membership: data.membership?.level || "Bronze",
+            membership: data.membership?.level || "Không có hạng",
           })
           console.log("Membership level:", data.membership?.level) // Debug membership
         }

@@ -40,12 +40,13 @@ const titleMap: Record<string, string> = {
   "/admin/rooms": "Quản lý phòng",
   "/admin/services": "Quản lý dịch vụ",
   "/admin/room-types": "Quản lý loại phòng",
-  "/admin/bookings": "Quản lý đơn đặt phòng",
+  "/admin/booking": "Quản lý đơn đặt phòng",
   "/admin/invoices": "Quản lý hóa đơn",
-  "/admin/services-bookings": "Quản lý dịch vụ đặt phòng",
+  "/admin/services-booking": "Quản lý dịch vụ đặt phòng",
   "/admin/vouchers": "Quản lý ưu đãi",
   "/admin/accounts": "Quản lý tài khoản",
   "/admin/support": "Liên hệ hỗ trợ",
+  "/admin/comments": "Quản lý bình luận",
 }
 
 export function AdminHeader({ onToggleSidebar, title }: AdminHeaderProps) {

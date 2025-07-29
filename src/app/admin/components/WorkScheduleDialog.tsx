@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, CheckCircle, XCircle } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { LoaiCongViec, lichlamviec_trangThaiCV, nhanvien_chucVu } from "@/generated/prisma";
+import { Input } from "@/components/ui/input";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -32,6 +34,7 @@ interface Room {
 interface Employee {
   maNhanVien: string;
   tenNhanVien: string;
+  chucVu: nhanvien_chucVu;
 }
 
 interface WorkSchedule {
@@ -40,15 +43,16 @@ interface WorkSchedule {
   tenPhong: string;
   maNhanVien: string;
   tenNhanVien: string;
+  chucVu: nhanvien_chucVu;
   ngayLam: string;
-  loaiCV: "DonDep" | "SuaChua";
-  trangThaiCV: "ChuaHoanThanh" | "DaHoanThanh";
+  loaiCV: LoaiCongViec;
+  trangThaiCV: lichlamviec_trangThaiCV;
 }
 
 interface WorkScheduleDialogProps {
   mode: "create" | "edit";
   schedule?: WorkSchedule;
-  onSuccess?: () => void;
+  onSuccess?: () => Promise<void>;
   children: React.ReactNode;
 }
 
@@ -58,43 +62,26 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
   const [rooms, setRooms] = useState<Room[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [date, setDate] = useState<Date | undefined>();
-  const [disabledDates, setDisabledDates] = useState<Date[]>([]);
 
   const [formData, setFormData] = useState({
     maPhong: "",
     maNhanVien: "",
-    loaiCongViec: "DonDep" as "DonDep" | "SuaChua",
-    trangThaiCV: "ChuaHoanThanh" as "ChuaHoanThanh" | "DaHoanThanh",
+    loaiCongViec: LoaiCongViec.DonDep as LoaiCongViec,
+    trangThaiCV: lichlamviec_trangThaiCV.ChuaHoanThanh as lichlamviec_trangThaiCV,
   });
 
-  useEffect(() => {
-    if (formData.maPhong) {
-      fetchDisabledDates(formData.maPhong);
-    }
-  }, [formData.maPhong]);
+  // Lọc danh sách nhân viên dựa trên loại công việc (chỉ dùng trong chế độ create)
+  const filteredEmployees = useMemo(() => {
+    if (mode === "edit") return employees; // Trong chế độ edit, không cần lọc
+    return employees.filter(
+      (employee) =>
+        (formData.loaiCongViec === LoaiCongViec.DonDep && employee.chucVu === nhanvien_chucVu.DonDep) ||
+        (formData.loaiCongViec === LoaiCongViec.SuaChua && employee.chucVu === nhanvien_chucVu.SuaChua)
+    );
+  }, [employees, formData.loaiCongViec, mode]);
 
-  const fetchDisabledDates = async (maPhong: string) => {
-    try {
-      const res = await fetch(`${BASE_URL}/api/rooms/${maPhong}/book-dates`);
-      const data = await res.json();
-
-      if (res.ok && Array.isArray(data.data)) {
-        const disabled: Date[] = [];
-        for (const booking of data.data) {
-          const start = new Date(booking.check_in);
-          const end = new Date(booking.check_out);
-          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            disabled.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-          }
-        }
-        setDisabledDates(disabled);
-      } else {
-        console.error("Lỗi khi lấy ngày bận:", data);
-      }
-    } catch (error) {
-      console.error("Lỗi khi fetch ngày bận:", error);
-    }
-  };
+  // Ngày hiện tại (dùng ngày hiện tại thực tế)
+  const today = startOfDay(new Date());
 
   useEffect(() => {
     if (open) {
@@ -107,29 +94,52 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
           trangThaiCV: schedule.trangThaiCV,
         });
         setDate(new Date(schedule.ngayLam));
+      } else {
+        setFormData({
+          maPhong: "",
+          maNhanVien: "",
+          loaiCongViec: LoaiCongViec.DonDep,
+          trangThaiCV: lichlamviec_trangThaiCV.ChuaHoanThanh,
+        });
+        setDate(undefined);
       }
     }
   }, [open, mode, schedule]);
 
   const fetchRoomsAndEmployees = async () => {
     try {
-      const resRooms = await fetch(`${BASE_URL}/admin/api/rooms`);
+      const resRooms = await fetch(`${BASE_URL}/admin/api/rooms`, {
+        cache: "no-store",
+      });
       const dataRooms = await resRooms.json();
       if (resRooms.ok && Array.isArray(dataRooms.rooms)) {
         setRooms(dataRooms.rooms);
       } else {
-        console.error("Rooms không hợp lệ:", dataRooms);
+        toast.error("Lỗi khi lấy danh sách phòng", {
+          icon: <XCircle className="w-4 h-4 text-red-600" />,
+          duration: 5000,
+        });
       }
 
-      const resEmployees = await fetch(`${BASE_URL}/admin/api/employees-only`);
+      const resEmployees = await fetch(`${BASE_URL}/admin/api/employees-only`, {
+        cache: "no-store",
+      });
       const dataEmployees = await resEmployees.json();
       if (resEmployees.ok && Array.isArray(dataEmployees)) {
         setEmployees(dataEmployees);
       } else {
-        console.error("Employees không hợp lệ:", dataEmployees);
+        toast.error("Lỗi khi lấy danh sách nhân viên", {
+          icon: <XCircle className="w-4 h-4 text-red-600" />,
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error("Lỗi khi fetch phòng và nhân viên:", error);
+      toast.error("Lỗi khi tải dữ liệu", {
+        description: error instanceof Error ? error.message : "Lỗi kết nối server",
+        icon: <XCircle className="w-4 h-4 text-red-600" />,
+        duration: 5000,
+      });
     }
   };
 
@@ -139,8 +149,34 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
     if (!formData.maPhong || !formData.maNhanVien || !date) {
       toast.error("Vui lòng điền đầy đủ thông tin", {
         icon: <XCircle className="w-4 h-4 text-red-600" />,
+        duration: 5000,
       });
       return;
+    }
+
+    // Kiểm tra ngày làm việc không được là quá khứ trong chế độ create
+    if (mode === "create" && date < today) {
+      toast.error("Ngày làm việc phải là hôm nay hoặc trong tương lai", {
+        icon: <XCircle className="w-4 h-4 text-red-600" />,
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Kiểm tra nhân viên có chức vụ phù hợp với loại công việc (chỉ trong chế độ create)
+    if (mode === "create") {
+      const selectedEmployee = employees.find((emp) => emp.maNhanVien === formData.maNhanVien);
+      if (
+        selectedEmployee &&
+        ((formData.loaiCongViec === LoaiCongViec.DonDep && selectedEmployee.chucVu !== nhanvien_chucVu.DonDep) ||
+         (formData.loaiCongViec === LoaiCongViec.SuaChua && selectedEmployee.chucVu !== nhanvien_chucVu.SuaChua))
+      ) {
+        toast.error(`Nhân viên với chức vụ ${selectedEmployee.chucVu} không thể thực hiện công việc ${formData.loaiCongViec}`, {
+          icon: <XCircle className="w-4 h-4 text-red-600" />,
+          duration: 5000,
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -179,17 +215,7 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
       });
 
       setOpen(false);
-      onSuccess?.();
-
-      if (mode === "create") {
-        setFormData({
-          maPhong: "",
-          maNhanVien: "",
-          loaiCongViec: "DonDep",
-          trangThaiCV: "ChuaHoanThanh",
-        });
-        setDate(undefined);
-      }
+      await onSuccess?.();
     } catch (error) {
       toast.error("Có lỗi xảy ra", {
         description: error instanceof Error ? error.message : "Vui lòng thử lại",
@@ -201,14 +227,29 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
     }
   };
 
+  // Logic vô hiệu hóa ngày quá khứ
+  const isDateDisabled = (dateToCheck: Date) => {
+    if (mode === "create") {
+      // Trong chế độ create, vô hiệu hóa các ngày trước ngày hiện tại
+      return dateToCheck < today;
+    } else if (mode === "edit" && schedule) {
+      // Trong chế độ edit, cho phép giữ ngày hiện tại của lịch, nhưng vô hiệu hóa các ngày quá khứ khác
+      const originalDate = startOfDay(new Date(schedule.ngayLam));
+      return dateToCheck < today && dateToCheck.getTime() !== originalDate.getTime();
+    }
+    return false;
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Thêm lịch làm việc mới" : "Chỉnh sửa lịch làm việc"}</DialogTitle>
+          <DialogTitle className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {mode === "create" ? "Thêm lịch làm việc mới" : "Chỉnh sửa lịch làm việc"}
+          </DialogTitle>
           <DialogDescription>
-            {mode === "create" ? "Tạo lịch làm việc mới cho nhân viên" : "Cập nhật thông tin lịch làm việc"}
+            {mode === "create" ? "Tạo lịch làm việc mới cho nhân viên" : "Cập nhật ngày làm việc hoặc trạng thái"}
           </DialogDescription>
         </DialogHeader>
 
@@ -216,42 +257,65 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="room">Phòng *</Label>
-              <Select
-                value={formData.maPhong}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, maPhong: value }))}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn phòng" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.maPhong} value={room.maPhong}>
-                      {room.tenPhong} ({room.maPhong})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {mode === "edit" ? (
+                <Input
+                  value={
+                    rooms.find((room) => room.maPhong === formData.maPhong)?.tenPhong +
+                    ` (${formData.maPhong})`
+                  }
+                  disabled
+                  className="bg-gray-100"
+                />
+              ) : (
+                <Select
+                  value={formData.maPhong}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, maPhong: value }))}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn phòng" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room) => (
+                      <SelectItem key={room.maPhong} value={room.maPhong}>
+                        {room.tenPhong} ({room.maPhong})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="employee">Nhân viên *</Label>
-              <Select
-                value={formData.maNhanVien}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, maNhanVien: value }))}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn nhân viên" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.maNhanVien} value={employee.maNhanVien}>
-                      {employee.tenNhanVien} ({employee.maNhanVien})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {mode === "edit" ? (
+                <Input
+                  value={
+                    employees.find((emp) => emp.maNhanVien === formData.maNhanVien)?.tenNhanVien +
+                    ` (${formData.maNhanVien})`
+                  }
+                  disabled
+                  className="bg-gray-100"
+                />
+              ) : (
+                <Select
+                  value={formData.maNhanVien}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, maNhanVien: value }))}
+                  required
+                  disabled={filteredEmployees.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={filteredEmployees.length === 0 ? "Không có nhân viên phù hợp" : "Chọn nhân viên"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredEmployees.map((employee) => (
+                      <SelectItem key={employee.maNhanVien} value={employee.maNhanVien}>
+                        {employee.tenNhanVien} ({employee.maNhanVien}) - {employee.chucVu}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -274,7 +338,7 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
                   onSelect={(selected) => setDate(selected ? new Date(selected.getFullYear(), selected.getMonth(), selected.getDate()) : undefined)}
                   initialFocus
                   locale={vi}
-                  disabled={disabledDates}
+                  disabled={isDateDisabled}
                 />
               </PopoverContent>
             </Popover>
@@ -283,21 +347,29 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="jobType">Loại công việc *</Label>
-              <Select
-                value={formData.loaiCongViec}
-                onValueChange={(value: "DonDep" | "SuaChua") =>
-                  setFormData((prev) => ({ ...prev, loaiCongViec: value }))
-                }
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DonDep">Dọn dẹp</SelectItem>
-                  <SelectItem value="SuaChua">Sửa chữa</SelectItem>
-                </SelectContent>
-              </Select>
+              {mode === "edit" ? (
+                <Input
+                  value={formData.loaiCongViec === LoaiCongViec.DonDep ? "Dọn dẹp" : "Sửa chữa"}
+                  disabled
+                  className="bg-gray-100"
+                />
+              ) : (
+                <Select
+                  value={formData.loaiCongViec}
+                  onValueChange={(value: LoaiCongViec) => {
+                    setFormData((prev) => ({ ...prev, loaiCongViec: value, maNhanVien: "" }));
+                  }}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn loại công việc" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={LoaiCongViec.DonDep}>Dọn dẹp</SelectItem>
+                    <SelectItem value={LoaiCongViec.SuaChua}>Sửa chữa</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {mode === "edit" && (
@@ -305,7 +377,7 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
                 <Label htmlFor="status">Trạng thái</Label>
                 <Select
                   value={formData.trangThaiCV}
-                  onValueChange={(value: "ChuaHoanThanh" | "DaHoanThanh") =>
+                  onValueChange={(value: lichlamviec_trangThaiCV) =>
                     setFormData((prev) => ({ ...prev, trangThaiCV: value }))
                   }
                 >
@@ -313,8 +385,8 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ChuaHoanThanh">Chưa hoàn thành</SelectItem>
-                    <SelectItem value="DaHoanThanh">Hoàn thành</SelectItem>
+                    <SelectItem value={lichlamviec_trangThaiCV.ChuaHoanThanh}>Chưa hoàn thành</SelectItem>
+                    <SelectItem value={lichlamviec_trangThaiCV.DaHoanThanh}>Hoàn thành</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

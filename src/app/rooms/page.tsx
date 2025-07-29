@@ -1170,19 +1170,20 @@ export default function RoomsPage() {
                             toast.warning("Ngày này đã được đặt, vui lòng chọn ngày khác!");
                             return;
                           }
-
-                          // ❌ Không dùng: date.toISOString().split("T")[0]
-                          // ✅ Dùng local format
                           const formatted = formatDateToYYYYMMDDLocal(date);
                           handleBookingFormChange("checkIn", formatted);
                         }}
                         excludeDates={bookedDates}
-                        minDate={new Date(Date.now() + 86400000)}
+                        minDate={
+                          // Kiểm tra nếu trước 22:00 thì cho phép chọn ngày hiện tại
+                          new Date().getHours() < 22
+                            ? new Date(new Date().setHours(0, 0, 0, 0)) // Ngày hiện tại (bắt đầu từ 00:00)
+                            : new Date(Date.now() + 86400000) // Ngày tiếp theo
+                        }
                         dateFormat="yyyy-MM-dd"
                         className="mt-1 w-full border px-3 py-2 rounded"
                         placeholderText="Chọn ngày nhận phòng"
                       />
-
                     </div>
 
                     <div>
@@ -1192,15 +1193,11 @@ export default function RoomsPage() {
                         selected={bookingForm.checkOut ? parseLocalDate(bookingForm.checkOut) : null}
                         onChange={(date: Date | null) => {
                           if (!date) return;
-
                           const checkInDate = bookingForm.checkIn ? parseLocalDate(bookingForm.checkIn) : null;
-
-                          // ❌ Nếu chọn checkOut <= checkIn → cảnh báo
                           if (checkInDate && date <= checkInDate) {
                             toast.warning("Ngày trả phòng phải sau ngày nhận phòng!");
                             return;
                           }
-
                           const isBooked = bookedDates.some(
                             (d) => d.toDateString() === date.toDateString()
                           );
@@ -1208,15 +1205,16 @@ export default function RoomsPage() {
                             toast.warning("Ngày này đã được đặt, vui lòng chọn ngày khác!");
                             return;
                           }
-
                           const formatted = formatDateToYYYYMMDDLocal(date);
                           handleBookingFormChange("checkOut", formatted);
                         }}
                         excludeDates={bookedDates}
                         minDate={
                           bookingForm.checkIn
-                            ? addDays(parseLocalDate(bookingForm.checkIn), 1) // 👈 ít nhất là 1 ngày sau check-in
-                            : new Date(Date.now() + 86400000)
+                            ? addDays(parseLocalDate(bookingForm.checkIn), 1) // Ít nhất 1 ngày sau check-in
+                            : new Date().getHours() < 22
+                              ? new Date(new Date().setHours(0, 0, 0, 0)) // Ngày hiện tại nếu trước 22:00
+                              : new Date(Date.now() + 86400000) // Ngày tiếp theo
                         }
                         dateFormat="yyyy-MM-dd"
                         className="mt-1 w-full border px-3 py-2 rounded"
