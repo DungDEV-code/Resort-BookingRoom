@@ -34,8 +34,8 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Ngày làm không hợp lệ" }, { status: 400 });
     }
 
-    // Kiểm tra ngày làm không được là quá khứ
-    const today = startOfDay(new Date(2025, 6, 29)); // 29/7/2025
+    // Kiểm tra ngày không phải quá khứ nếu đổi ngày
+    const today = startOfDay(new Date(2025, 6, 29)); // hardcoded for example
     const existingSchedule = await prisma.lichlamviec.findUnique({
       where: { malichLamViec: maLichLamViec },
     });
@@ -50,25 +50,19 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Kiểm tra phòng tồn tại
+    // Kiểm tra phòng và nhân viên
     const phong = await prisma.phong.findUnique({
       where: { maPhong: parsed.maPhong },
       select: { maPhong: true, tenPhong: true },
     });
-    if (!phong) {
-      return NextResponse.json({ error: "Phòng không tồn tại" }, { status: 404 });
-    }
+    if (!phong) return NextResponse.json({ error: "Phòng không tồn tại" }, { status: 404 });
 
-    // Kiểm tra nhân viên tồn tại và chức vụ
     const nhanvien = await prisma.nhanvien.findUnique({
       where: { maNhanVien: parsed.maNhanVien },
       select: { maNhanVien: true, tenNhanVien: true, chucVu: true },
     });
-    if (!nhanvien) {
-      return NextResponse.json({ error: "Nhân viên không tồn tại" }, { status: 404 });
-    }
+    if (!nhanvien) return NextResponse.json({ error: "Nhân viên không tồn tại" }, { status: 404 });
 
-    // Kiểm tra chức vụ phù hợp với loại công việc
     if (
       (parsed.loaiCongViec === LoaiCongViec.DonDep && nhanvien.chucVu !== nhanvien_chucVu.DonDep) ||
       (parsed.loaiCongViec === LoaiCongViec.SuaChua && nhanvien.chucVu !== nhanvien_chucVu.SuaChua)
@@ -79,38 +73,31 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Kiểm tra phòng có bị đặt trong ngày đó không
-    const trungBooking = await prisma.datphong.findFirst({
-      where: {
-        maPhong: parsed.maPhong,
-        check_in: { lte: ngayLam },
-        check_out: { gte: ngayLam },
-        trangThai: { not: "DaHuy" },
-      },
-    });
-    if (trungBooking) {
-      return NextResponse.json({ error: "Phòng đang được đặt trong thời gian này" }, { status: 409 });
-    }
+  
+    
 
-    // Kiểm tra lịch làm việc trùng phòng + ngày (ngoại trừ lịch hiện tại)
+    // ✅ Chỉ chặn nếu có lịch cùng loại công việc, cùng phòng, cùng ngày, khác mã
     const trungLich = await prisma.chitiet_lichlamviec.findFirst({
       where: {
         maPhong: parsed.maPhong,
         malichLamViec: { not: maLichLamViec },
         lichlamviec: {
-          ngayLam: { equals: ngayLam },
+          ngayLam: ngayLam,
+          loaiCV: parsed.loaiCongViec,
         },
       },
     });
     if (trungLich) {
-      return NextResponse.json({ error: "Đã có lịch làm việc trong ngày này cho phòng này" }, { status: 409 });
+      return NextResponse.json({
+        error: `Phòng đã có công việc ${parsed.loaiCongViec === "DonDep" ? "Dọn Dẹp" : "Sửa Chữa"} trong ngày này`,
+      }, { status: 409 });
     }
 
-    // Kiểm tra lịch làm việc trùng nhân viên + ngày (ngoại trừ lịch hiện tại)
+    // Check nhân viên đã có lịch hôm đó chưa (trừ lịch đang cập nhật)
     const trungNhanVien = await prisma.lichlamviec.findFirst({
       where: {
         maNhanVien: parsed.maNhanVien,
-        ngayLam: { equals: ngayLam },
+        ngayLam: ngayLam,
         malichLamViec: { not: maLichLamViec },
       },
     });
@@ -118,7 +105,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Nhân viên đã có lịch làm việc trong ngày này" }, { status: 409 });
     }
 
-    // Cập nhật lịch làm việc và chi tiết lịch làm việc trong một giao dịch
+    // Cập nhật lịch và chi tiết
     const updated = await prisma.$transaction([
       prisma.lichlamviec.update({
         where: { malichLamViec: maLichLamViec },
@@ -160,7 +147,6 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
-
 export async function DELETE(req: NextRequest) {
   try {
     const { pathname } = new URL(req.url);

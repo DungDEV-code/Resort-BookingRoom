@@ -114,7 +114,12 @@ export async function POST(req: Request) {
                 { status: 400 }
             );
         }
-
+        if (userExists.role === "Admin" && chucVu !== "Admin") {
+            return NextResponse.json(
+                { error: "Tài khoản Admin chỉ được phép tạo nhân viên với chức vụ Admin." },
+                { status: 403 }
+            );
+        }
         const maNhanVien = generateRandomMaNhanVien();
 
         const nhanVien = await prisma.nhanvien.create({

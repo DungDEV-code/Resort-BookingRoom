@@ -68,8 +68,8 @@ export default function EmployeeDialog({ mode, employee, children, onSuccess }: 
         { value: nhanvien_chucVu.DonDep, label: "Nhân viên dọn dẹp" },
         { value: nhanvien_chucVu.SuaChua, label: "Nhân viên sửa chữa" },
         { value: nhanvien_chucVu.LeTan, label: "Lễ tân" },
-        { value: nhanvien_chucVu.BaoVe, label: "Bảo vệ" },
-        { value: nhanvien_chucVu.QuanLy, label: "Quản lý" },
+       
+        { value: nhanvien_chucVu.Admin, label: "Quản lý" },
     ]
 
     const workStatusOptions = [

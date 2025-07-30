@@ -240,8 +240,7 @@ enum nhanvien_chucVu {
   DonDep   @map("Nhân viên dọn dẹp")
   SuaChua  @map("Nhân viên sửa chữa")
   LeTan    @map("Lễ tân")
-  BaoVe    @map("Bảo vệ")
-  QuanLy   @map("Quản lý")
+  Admin    
 }
 enum roleadminuser_trangThaiTk {
   DangHoatDong @map("Đang Hoạt Động")

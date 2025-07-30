@@ -73,8 +73,7 @@ function ChucVuBadge({ chucVu }: { chucVu: nhanvien_chucVu }) {
     [nhanvien_chucVu.DonDep]: "Nhân viên dọn dẹp",
     [nhanvien_chucVu.SuaChua]: "Nhân viên sửa chữa",
     [nhanvien_chucVu.LeTan]: "Lễ tân",
-    [nhanvien_chucVu.BaoVe]: "Bảo vệ",
-    [nhanvien_chucVu.QuanLy]: "Quản lý",
+    [nhanvien_chucVu.Admin]: "Admin",
   }
 
   return (

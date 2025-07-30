@@ -1,113 +1,113 @@
-"use client"
+// app/components/ChatBot.tsx
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { MessageCircle, X, Send, Bot, User, Phone, Clock, Minimize2 } from "lucide-react"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle, X, Send, Bot, User, Phone, Clock, Minimize2 } from "lucide-react";
 
 interface Message {
-  id: number
-  text: string
-  sender: "user" | "bot"
-  timestamp: Date
+  id: number;
+  text: string;
+  sender: "user" | "bot";
+  timestamp: Date;
 }
 
 const initialMessages: Message[] = [
   {
     id: 1,
-    text: "Xin chào! Tôi là trợ lý ảo của Paradise Resort. Tôi có thể giúp bạn tìm hiểu về các dịch vụ, đặt phòng, hoặc trả lời bất kỳ câu hỏi nào về khu nghỉ dưỡng. Bạn cần hỗ trợ gì hôm nay?",
+    text: "Xin chào! Tôi là trợ lý ảo của Paradise Resort. Bạn muốn đặt phòng cho ngày nào, ở bao lâu, và đi bao nhiêu người ạ?",
     sender: "bot",
     timestamp: new Date(),
   },
-]
+];
 
-const quickReplies = ["Giá phòng như thế nào?", "Có những dịch vụ gì?", "Cách đặt phòng?", "Liên hệ trực tiếp"]
+const quickReplies = ["Giá phòng như thế nào?", "Có những dịch vụ gì?", "Cách đặt phòng?", "Liên hệ trực tiếp"];
 
 export default function ChatBot() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isMinimized, setIsMinimized] = useState(false)
-  const [messages, setMessages] = useState<Message[]>(initialMessages)
-  const [inputValue, setInputValue] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     if (isOpen && !isMinimized && inputRef.current) {
-      inputRef.current.focus()
+      inputRef.current.focus();
     }
-  }, [isOpen, isMinimized])
+  }, [isOpen, isMinimized]);
 
-  const handleSendMessage = (text: string) => {
-    if (!text.trim()) return
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim()) return;
 
     const userMessage: Message = {
       id: Date.now(),
       text: text.trim(),
       sender: "user",
       timestamp: new Date(),
-    }
+    };
 
-    setMessages((prev) => [...prev, userMessage])
-    setInputValue("")
-    setIsTyping(true)
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setIsTyping(true);
 
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse = getBotResponse(text.trim())
+    try {
+      // Gọi API /api/advisor
+      const response = await fetch("/api/advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const botMessage: Message = {
         id: Date.now() + 1,
-        text: botResponse,
+        text: data.reply,
         sender: "bot",
         timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, botMessage])
-      setIsTyping(false)
-    }, 1500)
-  }
+      };
 
-  const getBotResponse = (userText: string): string => {
-    const text = userText.toLowerCase()
-
-    if (text.includes("giá") || text.includes("phòng")) {
-      return "Giá phòng tại Paradise Resort từ 2.500.000 VNĐ/đêm tùy theo loại phòng và thời gian. Chúng tôi có nhiều gói ưu đãi hấp dẫn:\n\n• Deluxe Room: 2.500.000 - 3.500.000 VNĐ\n• Ocean View Suite: 4.500.000 - 6.000.000 VNĐ\n• Presidential Villa: 8.000.000 - 12.000.000 VNĐ\n\nBạn muốn tôi tư vấn thêm về loại phòng nào không?"
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        text: "Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại!",
+        sender: "bot",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
     }
-
-    if (text.includes("dịch vụ") || text.includes("tiện ích")) {
-      return "Paradise Resort cung cấp đầy đủ các dịch vụ cao cấp:\n\n🏖️ Bãi biển riêng & thể thao nước\n🍽️ 3 nhà hàng & 2 quầy bar\n💆‍♀️ Spa & massage thư giãn\n🏊‍♂️ Hồ bơi vô cực\n🎾 Sân tennis & golf mini\n👶 Khu vui chơi trẻ em\n🚗 Đưa đón sân bay miễn phí\n\nBạn quan tâm đến dịch vụ nào đặc biệt?"
-    }
-
-    if (text.includes("đặt") || text.includes("booking")) {
-      return "Để đặt phòng tại Paradise Resort, bạn có thể:\n\n📞 Gọi hotline: 1900-1234\n💻 Đặt online tại website\n📧 Email: booking@paradiseresort.com\n🏨 Đến trực tiếp tại resort\n\nĐặt trước 30 ngày được giảm 20%! Bạn muốn tôi hỗ trợ đặt phòng ngay không?"
-    }
-
-    if (text.includes("liên hệ") || text.includes("hotline")) {
-      return "Thông tin liên hệ Paradise Resort:\n\n📞 Hotline: 1900-1234 (24/7)\n📧 Email: info@paradiseresort.com\n📍 Địa chỉ: 123 Paradise Beach, Nha Trang\n🕐 Giờ làm việc: 24/7\n\nNhân viên tư vấn sẽ hỗ trợ bạn ngay lập tức!"
-    }
-
-    return "Cảm ơn bạn đã liên hệ! Tôi đã ghi nhận yêu cầu của bạn. Để được tư vấn chi tiết hơn, vui lòng liên hệ hotline 1900-1234 hoặc để lại thông tin, nhân viên sẽ gọi lại trong 15 phút. Bạn còn câu hỏi gì khác không?"
-  }
+  };
 
   const handleQuickReply = (reply: string) => {
-    handleSendMessage(reply)
-  }
+    handleSendMessage(reply);
+  };
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   return (
     <>
@@ -251,7 +251,7 @@ export default function ChatBot() {
                     className="flex-1 rounded-full border-gray-300 focus:border-sky-500"
                     onKeyPress={(e) => {
                       if (e.key === "Enter") {
-                        handleSendMessage(inputValue)
+                        handleSendMessage(inputValue);
                       }
                     }}
                   />
@@ -294,5 +294,5 @@ export default function ChatBot() {
         </div>
       )}
     </>
-  )
+  );
 }

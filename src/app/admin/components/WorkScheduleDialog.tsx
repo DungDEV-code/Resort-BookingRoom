@@ -55,7 +55,19 @@ interface WorkScheduleDialogProps {
   onSuccess?: () => Promise<void>;
   children: React.ReactNode;
 }
-
+function formatChucVu(chucVu: nhanvien_chucVu): string {
+  switch (chucVu) {
+    case "DonDep":
+      return "Dọn dẹp";
+    case "SuaChua":
+      return "Sửa chữa";
+    case "LeTan":
+      return "Lễ tân";
+   
+    default:
+      return chucVu;
+  }
+}
 export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: WorkScheduleDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -169,7 +181,7 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
       if (
         selectedEmployee &&
         ((formData.loaiCongViec === LoaiCongViec.DonDep && selectedEmployee.chucVu !== nhanvien_chucVu.DonDep) ||
-         (formData.loaiCongViec === LoaiCongViec.SuaChua && selectedEmployee.chucVu !== nhanvien_chucVu.SuaChua))
+          (formData.loaiCongViec === LoaiCongViec.SuaChua && selectedEmployee.chucVu !== nhanvien_chucVu.SuaChua))
       ) {
         toast.error(`Nhân viên với chức vụ ${selectedEmployee.chucVu} không thể thực hiện công việc ${formData.loaiCongViec}`, {
           icon: <XCircle className="w-4 h-4 text-red-600" />,
@@ -309,8 +321,12 @@ export function WorkScheduleDialog({ mode, schedule, onSuccess, children }: Work
                   </SelectTrigger>
                   <SelectContent>
                     {filteredEmployees.map((employee) => (
-                      <SelectItem key={employee.maNhanVien} value={employee.maNhanVien}>
-                        {employee.tenNhanVien} ({employee.maNhanVien}) - {employee.chucVu}
+                      <SelectItem
+                        key={employee.maNhanVien}
+                        value={employee.maNhanVien}
+                        title={`${employee.tenNhanVien} (${employee.maNhanVien}) - ${formatChucVu(employee.chucVu)}`}
+                      >
+                        {employee.tenNhanVien} - {formatChucVu(employee.chucVu)}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -25,7 +25,6 @@ export default function LoginPage() {
 
         try {
             const apiUrl = `${BASE_URL}/admin/api/login`
-            console.log("Sending request to:", apiUrl)
             const res = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -41,26 +40,36 @@ export default function LoginPage() {
             }
 
             const data = await res.json()
+
             if (!res.ok) {
                 setError(data.error || "Đăng nhập thất bại")
                 return
             }
 
-            // Assuming the API returns user data like { email, name, token, ... }
             const userData = {
-                email: data.email || email, // Fallback to input email if API doesn't return it
-                name: data.name || "Admin User", // Fallback name if not provided
+                email: data.email || email,
+                name: data.name || "Admin User",
+                role: data.role,
+                chucVu: data.chucVu,
             }
 
-            // Store user data in localStorage
+            // Lưu thông tin đăng nhập
             if (rememberMe) {
                 localStorage.setItem("user", JSON.stringify(userData))
             } else {
-                sessionStorage.setItem("user", JSON.stringify(userData)) // Use sessionStorage for non-persistent storage
+                sessionStorage.setItem("user", JSON.stringify(userData))
             }
 
-            toast.success("Đăng nhập thành công!")
-            window.location.href = "/admin/dashboard"
+            // Kiểm tra quyền và điều hướng
+            if (data.role === "Admin") {
+                toast.success("Đăng nhập thành công!")
+                window.location.href = "/admin/dashboard"
+            } else if (data.role === "NhanVien") {
+                toast.success("Đăng nhập thành công!")
+                window.location.href = "/admin/pending"
+            } else {
+                setError("Bạn không có quyền truy cập hệ thống")
+            }
         } catch (err) {
             console.error("Fetch error:", err)
             setError("Đã có lỗi xảy ra")
@@ -68,6 +77,7 @@ export default function LoginPage() {
             setIsLoading(false)
         }
     }
+
 
     useEffect(() => {
         if (error) {

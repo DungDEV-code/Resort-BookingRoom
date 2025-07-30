@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { LoaiCongViec, lichlamviec_trangThaiCV, nhanvien_chucVu } from "@/generated/prisma";
+import jwt from "jsonwebtoken"
 
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 // Schema validation cho POST request
 const createScheduleSchema = z.object({
   maPhong: z.string().min(1, "Mã phòng là bắt buộc").max(20, "Mã phòng không được vượt quá 20 ký tự"),
@@ -14,9 +16,40 @@ const createScheduleSchema = z.object({
   }),
 });
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const token = req.cookies.get("adminToken")?.value
+    if (!token) {
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 })
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as { email: string; role: string }
+
+    const nhanVien = await prisma.nhanvien.findUnique({
+      where: { maUser: decoded.email },
+      select: {
+        maNhanVien: true,
+        chucVu: true,
+        roleadminuser: {
+          select: {
+            role: true,
+          },
+        },
+      },
+    })
+
+    if (!nhanVien || !nhanVien.roleadminuser) {
+      return NextResponse.json({ error: "Không tìm thấy nhân viên hoặc role" }, { status: 404 })
+    }
+
+    // Nếu là admin, lấy tất cả lịch
+    const whereClause =
+      nhanVien.roleadminuser.role === "Admin"
+        ? undefined
+        : { maNhanVien: nhanVien.maNhanVien }
+
     const schedules = await prisma.lichlamviec.findMany({
+      where: whereClause,
       include: {
         nhanvien: {
           select: {
@@ -39,7 +72,7 @@ export async function GET() {
       orderBy: {
         ngayLam: "desc",
       },
-    });
+    })
 
     const formatted = schedules.map((s) => ({
       maLichLamViec: s.malichLamViec,
@@ -51,18 +84,21 @@ export async function GET() {
       ngayLam: s.ngayLam.toISOString().split("T")[0],
       loaiCV: s.loaiCV,
       trangThaiCV: s.trangThaiCV,
-    }));
+    }))
 
     return NextResponse.json(formatted, {
       status: 200,
       headers: { "Cache-Control": "no-store" },
-    });
+    })
   } catch (error) {
-    console.error("Lỗi khi lấy lịch làm việc:", error);
+    console.error("Lỗi khi lấy lịch làm việc:", error)
     return NextResponse.json(
-      { error: "Lỗi máy chủ", details: error instanceof Error ? error.message : "Unknown error" },
+      {
+        error: "Lỗi máy chủ",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -88,12 +124,17 @@ export async function POST(req: NextRequest) {
     // Kiểm tra nhân viên tồn tại và chức vụ
     const nhanvien = await prisma.nhanvien.findUnique({
       where: { maNhanVien: parsed.maNhanVien },
-      select: { maNhanVien: true, tenNhanVien: true, chucVu: true },
+      select: { maNhanVien: true, tenNhanVien: true, chucVu: true ,  trangThaiLamViec: true, },
     });
     if (!nhanvien) {
       return NextResponse.json({ error: "Nhân viên không tồn tại" }, { status: 404 });
     }
-
+    if (nhanvien.trangThaiLamViec=== "Nghi") {
+      return NextResponse.json(
+        { error: "Nhân viên hiện đang nghỉ và không thể nhận công việc" },
+        { status: 400 }
+      );
+    }
     // Kiểm tra chức vụ phù hợp với loại công việc
     if (
       (parsed.loaiCongViec === LoaiCongViec.DonDep && nhanvien.chucVu !== nhanvien_chucVu.DonDep) ||
@@ -106,17 +147,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Kiểm tra phòng có bị đặt trong ngày đó không
-    const trungBooking = await prisma.datphong.findFirst({
-      where: {
-        maPhong: parsed.maPhong,
-        check_in: { lte: ngayLam },
-        check_out: { gte: ngayLam },
-        trangThai: { not: "DaHuy" },
-      },
-    });
-    if (trungBooking) {
-      return NextResponse.json({ error: "Phòng đang được đặt trong thời gian này" }, { status: 409 });
-    }
+
 
     // Kiểm tra lịch làm việc trùng phòng + ngày
     const trungLich = await prisma.chitiet_lichlamviec.findFirst({
@@ -124,6 +155,7 @@ export async function POST(req: NextRequest) {
         maPhong: parsed.maPhong,
         lichlamviec: {
           ngayLam: { equals: ngayLam },
+          loaiCV: parsed.loaiCongViec, // 🔍 kiểm tra đúng loại công việc
         },
       },
     });

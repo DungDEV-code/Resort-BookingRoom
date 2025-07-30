@@ -1,4 +1,4 @@
-// app/admin/api/login/route.ts
+
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
@@ -10,42 +10,56 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json()
 
-    // Tìm user theo email
+    // Find user by email
     const user = await prisma.roleadminuser.findUnique({
       where: { email },
+      include: {
+        nhanvien: true, // Include nhanvien to get chucVu for NhanVien role
+      },
     })
 
     if (!user) {
       return NextResponse.json({ error: "Tài khoản không tồn tại" }, { status: 401 })
     }
-
-    // Kiểm tra vai trò có phải Admin
-    if (user.role !== "Admin") {
+    if (user.trangThaiTk !== "DangHoatDong") {
+      return NextResponse.json({ error: "Tài khoản đã bị vô hiệu hóa" }, { status: 403 })
+    }
+    // Check if user role is Admin or NhanVien
+    if (user.role !== "Admin" && user.role !== "NhanVien") {
       return NextResponse.json({ error: "Không có quyền truy cập" }, { status: 403 })
     }
 
-    // So sánh mật khẩu
+    // Compare password
     const isMatch = await bcrypt.compare(password, user.passWord)
     if (!isMatch) {
       return NextResponse.json({ error: "Sai mật khẩu" }, { status: 401 })
     }
 
-    // Tạo token JWT
-    const token = jwt.sign(
-      {
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    )
+    // Create JWT token with role and chucVu (if NhanVien)
+    const tokenPayload: { email: string; role: string; chucVu?: string } = {
+      email: user.email,
+      role: user.role,
+    }
+    if (user.role === "NhanVien" && user.nhanvien) {
+      tokenPayload.chucVu = user.nhanvien.chucVu
+    } else if (user.role === "Admin") {
+      tokenPayload.chucVu = "Admin" // Explicitly set chucVu for Admin
+    }
 
-    // Trả về token dưới dạng cookie
-    const response = NextResponse.json({ message: "Đăng nhập thành công" })
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" })
+
+    // Return token as cookie
+    const response = NextResponse.json({
+      message: "Đăng nhập thành công",
+      email: user.email,
+      role: user.role,
+      chucVu: tokenPayload.chucVu,
+    })
+
     response.cookies.set("adminToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 7 ngày
+      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: "/",
     })
 
